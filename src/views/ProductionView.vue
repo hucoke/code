@@ -3,36 +3,55 @@
     <div class="navbar">
       <h1>瓶胚全流程管理系统</h1>
       <ul class="main-menu">
-        <li class="menu-item">
+        <li class="menu-item production">
           <router-link to="/production">
             <span class="menu-icon">📦</span>
             <span class="menu-text">生产</span>
           </router-link>
         </li>
-        <li class="menu-item">
-          <span class="menu-label">
+        <li class="menu-item logistics">
+          <router-link to="/delivery">
             <span class="menu-icon">🚚</span>
-            <span class="menu-text">物流</span>
-          </span>
-          <ul class="submenu">
-            <li><router-link to="/delivery"><span class="sub-icon">➤</span>发货管理</router-link></li>
-            <li><router-link to="/receiving"><span class="sub-icon">➤</span>收货管理</router-link></li>
-            <li><router-link to="/usage"><span class="sub-icon">➤</span>使用管理</router-link></li>
-          </ul>
+            <span class="menu-text">发货</span>
+          </router-link>
         </li>
-        <li class="menu-item">
-          <span class="menu-label">
+        <li class="menu-item logistics">
+          <router-link to="/receiving">
+            <span class="menu-icon">📥</span>
+            <span class="menu-text">收货</span>
+          </router-link>
+        </li>
+        <li class="menu-item logistics">
+          <router-link to="/usage">
+            <span class="menu-icon">🔧</span>
+            <span class="menu-text">使用</span>
+          </router-link>
+        </li>
+        <li class="menu-item system">
+          <router-link to="/dashboard/barcode-maintenance">
+            <span class="menu-icon">🏷</span>
+            <span class="menu-text">条码维护</span>
+          </router-link>
+        </li>
+        <li class="menu-item system">
+          <router-link to="/dashboard/barcode-config">
             <span class="menu-icon">⚙</span>
-            <span class="menu-text">系统</span>
-          </span>
-          <ul class="submenu">
-            <li><router-link to="/dashboard/barcode-maintenance"><span class="sub-icon">➤</span>条码维护</router-link></li>
-            <li><router-link to="/dashboard/barcode-config"><span class="sub-icon">➤</span>条码配置</router-link></li>
-            <li><router-link to="/dashboard/status-view"><span class="sub-icon">➤</span>状态查看</router-link></li>
-            <li><router-link to="/dashboard/statistics"><span class="sub-icon">➤</span>统计分析</router-link></li>
-          </ul>
+            <span class="menu-text">条码配置</span>
+          </router-link>
         </li>
-        <li class="menu-item">
+        <li class="menu-item system">
+          <router-link to="/dashboard/status-view">
+            <span class="menu-icon">📊</span>
+            <span class="menu-text">状态查看</span>
+          </router-link>
+        </li>
+        <li class="menu-item system">
+          <router-link to="/dashboard/statistics">
+            <span class="menu-icon">📈</span>
+            <span class="menu-text">统计分析</span>
+          </router-link>
+        </li>
+        <li class="menu-item logout">
           <a href="#" @click.prevent="handleLogout">
             <span class="menu-icon">🚪</span>
             <span class="menu-text">退出</span>
@@ -510,41 +529,47 @@ export default {
   padding: 0;
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .navbar h1 {
   margin: 0 30px 0 0;
   font-size: 18px;
+  white-space: nowrap;
 }
 
 .main-menu {
   flex: 1;
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .menu-item {
   position: relative;
-  margin: 0 8px;
+  margin: 0;
   display: inline-block;
 }
 
-.menu-item > a,
-.menu-item > .menu-label {
+.menu-item > a {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 10px 12px;
+  padding: 8px 12px;
   text-decoration: none;
   color: #fff;
   cursor: pointer;
   border-radius: 6px;
   transition: all 0.2s;
+  font-size: 14px;
+  white-space: nowrap;
 }
 
-.menu-item > a:hover,
-.menu-item > .menu-label:hover {
-  background-color: rgba(255,255,255,0.15);
+.menu-item > a:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
 }
 
 .menu-icon {
@@ -557,57 +582,37 @@ export default {
   font-size: 14px;
 }
 
-.submenu {
-  display: none;
-  position: absolute;
-  top: 100%;
-  left: 0;
-  background-color: #fff;
-  min-width: 180px;
-  border-radius: 8px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
-  z-index: 1000;
-  padding: 8px 0;
-  margin-top: 2px;
+/* Color differentiation for different menu types */
+.menu-item.production > a {
+  background-color: #4CAF50;
 }
 
-.submenu::before {
-  content: '';
-  position: absolute;
-  top: -6px;
-  left: 20px;
-  border-left: 6px solid transparent;
-  border-right: 6px solid transparent;
-  border-bottom: 6px solid #fff;
-  pointer-events: none;
+.menu-item.logistics > a {
+  background-color: #2196F3;
 }
 
-.menu-item:hover .submenu {
-  display: block;
+.menu-item.system > a {
+  background-color: #FF9800;
 }
 
-.submenu li {
-  list-style: none;
+.menu-item.logout > a {
+  background-color: #f44336;
 }
 
-.submenu li a {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 16px;
-  color: #333;
-  text-decoration: none;
-  font-size: 14px;
-  transition: background-color 0.2s;
+/* Hover effects for different menu types */
+.menu-item.production > a:hover {
+  background-color: #45a049;
 }
 
-.submenu li a:hover {
-  background-color: #f5f5f5;
-  color: #4CAF50;
+.menu-item.logistics > a:hover {
+  background-color: #1976D2;
 }
 
-.submenu li a .sub-icon {
-  color: #4CAF50;
-  width: 20px;
+.menu-item.system > a:hover {
+  background-color: #F57C00;
+}
+
+.menu-item.logout > a:hover {
+  background-color: #d32f2f;
 }
 </style>
