@@ -1,65 +1,5 @@
 <template>
-  <div class="container">
-    <div class="navbar">
-      <h1>瓶胚全流程管理系统</h1>
-      <ul class="main-menu">
-        <li class="menu-item production">
-          <router-link to="/production">
-            <span class="menu-icon">📦</span>
-            <span class="menu-text">生产</span>
-          </router-link>
-        </li>
-        <li class="menu-item logistics">
-          <router-link to="/delivery">
-            <span class="menu-icon">🚚</span>
-            <span class="menu-text">发货</span>
-          </router-link>
-        </li>
-        <li class="menu-item logistics">
-          <router-link to="/receiving">
-            <span class="menu-icon">📥</span>
-            <span class="menu-text">收货</span>
-          </router-link>
-        </li>
-        <li class="menu-item logistics">
-          <router-link to="/usage">
-            <span class="menu-icon">🔧</span>
-            <span class="menu-text">使用</span>
-          </router-link>
-        </li>
-        <li class="menu-item system">
-          <router-link to="/dashboard/barcode-maintenance">
-            <span class="menu-icon">🏷</span>
-            <span class="menu-text">条码维护</span>
-          </router-link>
-        </li>
-        <li class="menu-item system">
-          <router-link to="/dashboard/barcode-config">
-            <span class="menu-icon">⚙</span>
-            <span class="menu-text">条码配置</span>
-          </router-link>
-        </li>
-        <li class="menu-item system">
-          <router-link to="/dashboard/status-view">
-            <span class="menu-icon">📊</span>
-            <span class="menu-text">状态查看</span>
-          </router-link>
-        </li>
-        <li class="menu-item system">
-          <router-link to="/dashboard/statistics">
-            <span class="menu-icon">📈</span>
-            <span class="menu-text">统计分析</span>
-          </router-link>
-        </li>
-        <li class="menu-item logout">
-          <a href="#" @click.prevent="handleLogout">
-            <span class="menu-icon">🚪</span>
-            <span class="menu-text">退出</span>
-          </a>
-        </li>
-      </ul>
-    </div>
-    <div class="card">
+  <div class="card">
       <h2>下拉选项维护</h2>
       <div class="dropdown-section">
         <div class="form-group">
@@ -148,7 +88,6 @@
         </tbody>
       </table>
     </div>
-  </div>
 </template>
 
 <script>
@@ -335,119 +274,12 @@ export default {
         console.error('删除选项失败:', error)
         alert('删除失败')
       }
-    },
-    handleLogout() {
-      localStorage.removeItem('loggedIn')
-      this.$router.push('/')
     }
   }
 }
 </script>
 
 <style scoped>
-.container {
-  min-height: 100vh;
-  background: #f5f5f5;
-}
-
-.navbar {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  padding: 0 20px;
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 10px;
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-}
-
-.navbar h1 {
-  margin: 0 30px 0 0;
-  font-size: 18px;
-  white-space: nowrap;
-  color: #fff;
-}
-
-.main-menu {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  list-style: none;
-  margin: 0;
-  padding: 10px 0;
-}
-
-.menu-item {
-  position: relative;
-  margin: 0;
-  display: inline-block;
-}
-
-.menu-item > a {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 12px;
-  text-decoration: none;
-  color: #fff;
-  cursor: pointer;
-  border-radius: 6px;
-  transition: all 0.2s;
-  font-size: 14px;
-  white-space: nowrap;
-}
-
-.menu-item > a:hover {
-  opacity: 0.9;
-  transform: translateY(-1px);
-}
-
-.menu-icon {
-  font-size: 16px;
-  width: 20px;
-  text-align: center;
-}
-
-.menu-text {
-  font-size: 14px;
-}
-
-.menu-item.production > a {
-  background-color: #4CAF50;
-}
-
-.menu-item.logistics > a {
-  background-color: #2196F3;
-}
-
-.menu-item.system > a {
-  background-color: #FF9800;
-}
-
-.menu-item.logout > a {
-  background-color: #f44336;
-}
-
-.menu-item.production > a:hover {
-  background-color: #45a049;
-}
-
-.menu-item.logistics > a:hover {
-  background-color: #1976D2;
-}
-
-.menu-item.system > a:hover {
-  background-color: #F57C00;
-}
-
-.menu-item.logout > a:hover {
-  background-color: #d32f2f;
-}
-
 .card {
   background: #fff;
   border-radius: 10px;

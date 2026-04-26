@@ -1,7 +1,5 @@
 <template>
-  <div class="container">
-    <div class="content-wrapper">
-    <div class="card">
+  <div class="card">
       <h2>条码可视化配置</h2>
 
       <div class="config-section">
@@ -106,8 +104,6 @@
         {{ saveMessage.text }}
       </div>
     </div>
-    </div>
-  </div>
 </template>
 
 <script>
