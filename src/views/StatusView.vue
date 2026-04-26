@@ -9,75 +9,79 @@
 
     <div v-if="selectedBarcode" class="card" style="margin-top: 20px;">
       <h3>条码详情</h3>
+      <div class="table-container">
+        <table>
+          <tbody>
+            <tr>
+              <td><strong>条码</strong></td>
+              <td>{{ selectedBarcode.code }}</td>
+            </tr>
+            <tr>
+              <td><strong>产品型号</strong></td>
+              <td>{{ selectedBarcode.model }}</td>
+            </tr>
+            <tr>
+              <td><strong>生产批次</strong></td>
+              <td>{{ selectedBarcode.batch_code }}</td>
+            </tr>
+            <tr>
+              <td><strong>生产日期</strong></td>
+              <td>{{ selectedBarcode.production_date }}</td>
+            </tr>
+            <tr>
+              <td><strong>当前状态</strong></td>
+              <td>
+                <span :class="['status-tag', `status-${selectedBarcode.current_status || 'production'}`]">
+                  {{ statusMap[selectedBarcode.current_status || 'production'] }}
+                </span>
+              </td>
+            </tr>
+            <tr v-if="selectedBarcode.delivery_date">
+              <td><strong>发货日期</strong></td>
+              <td>{{ selectedBarcode.delivery_date }} {{ selectedBarcode.delivery_time }}</td>
+            </tr>
+            <tr v-if="selectedBarcode.receive_date">
+              <td><strong>收货日期</strong></td>
+              <td>{{ selectedBarcode.receive_date }} {{ selectedBarcode.receive_time }}</td>
+            </tr>
+            <tr v-if="selectedBarcode.use_date">
+              <td><strong>使用日期</strong></td>
+              <td>{{ selectedBarcode.use_date }} {{ selectedBarcode.use_time }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <h3>所有条码状态</h3>
+    <div class="table-container">
       <table>
+        <thead>
+          <tr>
+            <th>条码</th>
+            <th>产品型号</th>
+            <th>生产批次</th>
+            <th>当前状态</th>
+            <th>操作</th>
+          </tr>
+        </thead>
         <tbody>
-          <tr>
-            <td><strong>条码</strong></td>
-            <td>{{ selectedBarcode.code }}</td>
-          </tr>
-          <tr>
-            <td><strong>产品型号</strong></td>
-            <td>{{ selectedBarcode.model }}</td>
-          </tr>
-          <tr>
-            <td><strong>生产批次</strong></td>
-            <td>{{ selectedBarcode.batch_code }}</td>
-          </tr>
-          <tr>
-            <td><strong>生产日期</strong></td>
-            <td>{{ selectedBarcode.production_date }}</td>
-          </tr>
-          <tr>
-            <td><strong>当前状态</strong></td>
+          <tr v-for="item in barcodes" :key="item.code">
+            <td>{{ item.code }}</td>
+            <td>{{ item.model }}</td>
+            <td>{{ item.batch_code }}</td>
             <td>
-              <span :class="['status-tag', `status-${selectedBarcode.current_status || 'production'}`]">
-                {{ statusMap[selectedBarcode.current_status || 'production'] }}
+              <span :class="['status-tag', `status-${item.current_status || 'production'}`]">
+                {{ statusMap[item.current_status || 'production'] }}
               </span>
             </td>
-          </tr>
-          <tr v-if="selectedBarcode.delivery_date">
-            <td><strong>发货日期</strong></td>
-            <td>{{ selectedBarcode.delivery_date }} {{ selectedBarcode.delivery_time }}</td>
-          </tr>
-          <tr v-if="selectedBarcode.receive_date">
-            <td><strong>收货日期</strong></td>
-            <td>{{ selectedBarcode.receive_date }} {{ selectedBarcode.receive_time }}</td>
-          </tr>
-          <tr v-if="selectedBarcode.use_date">
-            <td><strong>使用日期</strong></td>
-            <td>{{ selectedBarcode.use_date }} {{ selectedBarcode.use_time }}</td>
+            <td>
+              <button class="btn btn-secondary" @click="viewDetails(item)">查看详情</button>
+            </td>
           </tr>
         </tbody>
       </table>
     </div>
-
-    <h3>所有条码状态</h3>
-    <table>
-      <thead>
-        <tr>
-          <th>条码</th>
-          <th>产品型号</th>
-          <th>生产批次</th>
-          <th>当前状态</th>
-          <th>操作</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="item in barcodes" :key="item.code">
-          <td>{{ item.code }}</td>
-          <td>{{ item.model }}</td>
-          <td>{{ item.batch_code }}</td>
-          <td>
-            <span :class="['status-tag', `status-${item.current_status || 'production'}`]">
-              {{ statusMap[item.current_status || 'production'] }}
-            </span>
-          </td>
-          <td>
-            <button class="btn btn-secondary" @click="viewDetails(item)">查看详情</button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
   </div>
 </template>
 

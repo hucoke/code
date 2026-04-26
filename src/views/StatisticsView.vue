@@ -22,28 +22,30 @@
     </div>
 
     <h3>产品型号统计</h3>
-    <table>
-      <thead>
-        <tr>
-          <th>产品型号</th>
-          <th>生产中</th>
-          <th>已发货</th>
-          <th>已收货</th>
-          <th>已使用</th>
-          <th>总计</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="(model, index) in modelStats" :key="index">
-          <td>{{ model.model }}</td>
-          <td>{{ model.production || 0 }}</td>
-          <td>{{ model.delivery || 0 }}</td>
-          <td>{{ model.received || 0 }}</td>
-          <td>{{ model.used || 0 }}</td>
-          <td>{{ model.total }}</td>
-        </tr>
-      </tbody>
-    </table>
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>产品型号</th>
+            <th>生产中</th>
+            <th>已发货</th>
+            <th>已收货</th>
+            <th>已使用</th>
+            <th>总计</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="(model, index) in modelStats" :key="index">
+            <td>{{ model.model }}</td>
+            <td>{{ model.production || 0 }}</td>
+            <td>{{ model.delivery || 0 }}</td>
+            <td>{{ model.received || 0 }}</td>
+            <td>{{ model.used || 0 }}</td>
+            <td>{{ model.total }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 </template>
 

@@ -1,65 +1,5 @@
 <template>
-  <div class="container">
-    <div class="navbar">
-      <h1>瓶胚全流程管理系统</h1>
-      <ul class="main-menu">
-        <li class="menu-item production">
-          <router-link to="/production">
-            <span class="menu-icon">📦</span>
-            <span class="menu-text">生产</span>
-          </router-link>
-        </li>
-        <li class="menu-item logistics">
-          <router-link to="/delivery">
-            <span class="menu-icon">🚚</span>
-            <span class="menu-text">发货</span>
-          </router-link>
-        </li>
-        <li class="menu-item logistics">
-          <router-link to="/receiving">
-            <span class="menu-icon">📥</span>
-            <span class="menu-text">收货</span>
-          </router-link>
-        </li>
-        <li class="menu-item logistics">
-          <router-link to="/usage">
-            <span class="menu-icon">🔧</span>
-            <span class="menu-text">使用</span>
-          </router-link>
-        </li>
-        <li class="menu-item system">
-          <router-link to="/dashboard/barcode-maintenance">
-            <span class="menu-icon">🏷</span>
-            <span class="menu-text">条码维护</span>
-          </router-link>
-        </li>
-        <li class="menu-item system">
-          <router-link to="/dashboard/barcode-config">
-            <span class="menu-icon">⚙</span>
-            <span class="menu-text">条码配置</span>
-          </router-link>
-        </li>
-        <li class="menu-item system">
-          <router-link to="/dashboard/status-view">
-            <span class="menu-icon">📊</span>
-            <span class="menu-text">状态查看</span>
-          </router-link>
-        </li>
-        <li class="menu-item system">
-          <router-link to="/dashboard/statistics">
-            <span class="menu-icon">📈</span>
-            <span class="menu-text">统计分析</span>
-          </router-link>
-        </li>
-        <li class="menu-item logout">
-          <a href="#" @click.prevent="handleLogout">
-            <span class="menu-icon">🚪</span>
-            <span class="menu-text">退出</span>
-          </a>
-        </li>
-      </ul>
-    </div>
-    <div class="card">
+  <div class="card">
       <h2>生产管理 - 生成条码</h2>
       <div class="form-row">
         <div class="form-group">
@@ -87,9 +27,11 @@
           <input type="date" id="productionDate" v-model="product.productionDate" required>
         </div>
       </div>
-      <button class="btn btn-primary" @click="generateBarcodes" :disabled="loading">生成条码</button>
-      <button v-if="!viewingBatchDetail" class="btn btn-secondary" @click="printAllBarcodes" :disabled="generatedBarcodes.length === 0 || loading">批量打印全部</button>
-      <button v-if="viewingBatchDetail" class="btn btn-secondary" @click="printAllBarcodes" :disabled="currentViewingBatch === null || loading">重新打印本批次</button>
+      <div class="button-group">
+        <button class="btn btn-primary" @click="generateBarcodes" :disabled="loading">生成条码</button>
+        <button v-if="!viewingBatchDetail" class="btn btn-secondary" @click="printAllBarcodes" :disabled="generatedBarcodes.length === 0 || loading">批量打印全部</button>
+        <button v-if="viewingBatchDetail" class="btn btn-secondary" @click="printAllBarcodes" :disabled="currentViewingBatch === null || loading">重新打印本批次</button>
+      </div>
 
       <div v-if="loading" style="margin-top: 20px; color: #666;">处理中...</div>
 
@@ -101,7 +43,7 @@
         <p style="color: #666; margin-bottom: 15px;">
           产品型号：{{ currentViewingBatch.model }} | 生产数量：{{ currentViewingBatch.quantity }} | 生产日期：{{ currentViewingBatch.production_date }}
         </p>
-        <div style="max-height: 400px; overflow-y: auto;">
+        <div class="table-container">
           <table>
             <thead>
               <tr>
@@ -129,7 +71,7 @@
 
       <div v-if="!viewingBatchDetail && generatedBarcodes.length > 0" class="card" style="margin-top: 20px;">
         <h3>已生成 {{ generatedBarcodes.length }} 张条码</h3>
-        <div style="max-height: 400px; overflow-y: auto;">
+        <div class="table-container">
           <table>
             <thead>
               <tr>
@@ -156,31 +98,33 @@
       </div>
 
       <h3 style="margin-top: 30px;">历史生产批次</h3>
-      <table>
-        <thead>
-          <tr>
-            <th>批次号</th>
-            <th>产品型号</th>
-            <th>生产数量</th>
-            <th>生产日期</th>
-            <th>生成时间</th>
-            <th>操作</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="batch in productionBatches" :key="batch.batch_code">
-            <td>{{ batch.batch_code }}</td>
-            <td>{{ batch.model }}</td>
-            <td>{{ batch.quantity }}</td>
-            <td>{{ batch.production_date }}</td>
-            <td>{{ batch.created_at }}</td>
-            <td>
-              <button class="btn btn-secondary" @click="printBatchBarcodes(batch)">{{ isBatchPrinted(batch.batch_code) ? '重新打印本批次' : '打印本批次' }}</button>
-              <button class="btn btn-secondary" @click="viewBatchDetail(batch)">查看详情</button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>批次号</th>
+              <th>产品型号</th>
+              <th>生产数量</th>
+              <th>生产日期</th>
+              <th>生成时间</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="batch in productionBatches" :key="batch.batch_code">
+              <td>{{ batch.batch_code }}</td>
+              <td>{{ batch.model }}</td>
+              <td>{{ batch.quantity }}</td>
+              <td>{{ batch.production_date }}</td>
+              <td>{{ batch.created_at }}</td>
+              <td>
+                <button class="btn btn-secondary" @click="printBatchBarcodes(batch)">{{ isBatchPrinted(batch.batch_code) ? '重新打印本批次' : '打印本批次' }}</button>
+                <button class="btn btn-secondary" @click="viewBatchDetail(batch)">查看详情</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
 
     <div ref="printAreaRef" style="display: none;">
@@ -197,7 +141,6 @@
         </div>
       </div>
     </div>
-  </div>
 </template>
 
 <script>
@@ -528,151 +471,3 @@ export default {
   }
 }
 </script>
-
-<style scoped>
-.navbar {
-  background-color: var(--primary-color);
-  color: white;
-  padding: 15px 20px;
-  margin-bottom: 20px;
-  border-radius: 8px;
-  box-shadow: var(--shadow);
-}
-
-.navbar ul {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.navbar h1 {
-  margin: 0 30px 0 0;
-  font-size: 18px;
-  white-space: nowrap;
-}
-
-.main-menu {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.menu-item {
-  position: relative;
-  margin: 0;
-  display: inline-block;
-}
-
-.menu-item > a {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 12px;
-  text-decoration: none;
-  color: #fff;
-  cursor: pointer;
-  border-radius: 6px;
-  transition: all 0.2s;
-  font-size: 14px;
-  white-space: nowrap;
-}
-
-.menu-item > a:hover {
-  opacity: 0.9;
-  transform: translateY(-1px);
-}
-
-.menu-icon {
-  font-size: 16px;
-  width: 20px;
-  text-align: center;
-}
-
-.menu-text {
-  font-size: 14px;
-}
-
-/* Color differentiation for different menu types */
-.menu-item.production > a {
-  background-color: #4CAF50;
-}
-
-.menu-item.logistics > a {
-  background-color: #2196F3;
-}
-
-.menu-item.system > a {
-  background-color: #FF9800;
-}
-
-.menu-item.logout > a {
-  background-color: #f44336;
-}
-
-/* Hover effects for different menu types */
-.menu-item.production > a:hover {
-  background-color: #45a049;
-}
-
-.menu-item.logistics > a:hover {
-  background-color: #1976D2;
-}
-
-.menu-item.system > a:hover {
-  background-color: #F57C00;
-}
-
-.menu-item.logout > a:hover {
-  background-color: #d32f2f;
-}
-
-.form-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 20px;
-  margin-bottom: 15px;
-}
-
-.form-group {
-  flex: 1;
-  min-width: 150px;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 5px;
-  font-weight: 500;
-  color: #555;
-}
-
-.form-group input,
-.form-group select {
-  width: 100%;
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 14px;
-  box-sizing: border-box;
-}
-
-.form-group input:focus,
-.form-group select:focus {
-  outline: none;
-  border-color: #4CAF50;
-}
-
-.date-input-group {
-  flex: 0 0 auto;
-  min-width: 160px;
-}
-
-.date-input-group input {
-  width: 160px;
-}
-</style>
