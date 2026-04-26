@@ -245,7 +245,7 @@ export default {
   pointer-events: none;
 }
 
-.menu-item:hover .submenu {
+.menu-item:hover > .submenu {
   display: block;
 }
 
