@@ -114,7 +114,7 @@ export default {
 .submenu {
   display: none;
   position: absolute;
-  top: calc(100% + 5px);
+  top: 100%;
   left: 0;
   background-color: #fff;
   min-width: 180px;
@@ -132,9 +132,11 @@ export default {
   border-left: 6px solid transparent;
   border-right: 6px solid transparent;
   border-bottom: 6px solid #fff;
+  pointer-events: none;
 }
 
-.menu-item:hover .submenu {
+.menu-label:hover + .submenu,
+.menu-item:hover > .submenu {
   display: block;
 }
 
