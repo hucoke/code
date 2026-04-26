@@ -510,11 +510,14 @@ export default {
 
 .main-menu {
   flex: 1;
+  display: flex;
+  align-items: center;
 }
 
 .menu-item {
   position: relative;
   margin: 0 8px;
+  display: inline-block;
 }
 
 .menu-item > a,
@@ -556,6 +559,7 @@ export default {
   box-shadow: 0 4px 20px rgba(0,0,0,0.2);
   z-index: 1000;
   padding: 8px 0;
+  margin-top: 2px;
 }
 
 .submenu::before {
@@ -569,8 +573,7 @@ export default {
   pointer-events: none;
 }
 
-.menu-label:hover + .submenu,
-.menu-item:hover > .submenu {
+.menu-item:hover .submenu {
   display: block;
 }
 
