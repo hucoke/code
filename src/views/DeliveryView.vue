@@ -167,6 +167,15 @@ export default {
 </script>
 
 <style scoped>
+.navbar {
+  background-color: var(--primary-color);
+  color: white;
+  padding: 15px 20px;
+  margin-bottom: 20px;
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+}
+
 .navbar ul {
   list-style: none;
   margin: 0;
@@ -245,7 +254,7 @@ export default {
   pointer-events: none;
 }
 
-.menu-item:hover > .submenu {
+.menu-item:hover .submenu {
   display: block;
 }
 
