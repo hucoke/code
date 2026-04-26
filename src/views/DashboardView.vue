@@ -1,64 +1,42 @@
 <template>
   <div class="container">
-    <div class="navbar">
-      <div class="navbar-content">
-        <h1>瓶胚全流程管理系统</h1>
-        <ul class="main-menu">
-          <li class="menu-item production">
-            <router-link to="/production">
-              <span class="menu-icon">📦</span>
-              <span class="menu-text">生产</span>
-            </router-link>
-          </li>
-          <li class="menu-item logistics">
-            <router-link to="/delivery">
-              <span class="menu-icon">🚚</span>
-              <span class="menu-text">发货</span>
-            </router-link>
-          </li>
-          <li class="menu-item logistics">
-            <router-link to="/receiving">
-              <span class="menu-icon">📥</span>
-              <span class="menu-text">收货</span>
-            </router-link>
-          </li>
-          <li class="menu-item logistics">
-            <router-link to="/usage">
-              <span class="menu-icon">🔧</span>
-              <span class="menu-text">使用</span>
-            </router-link>
-          </li>
-          <li class="menu-item system">
-            <router-link to="/dashboard/barcode-maintenance">
-              <span class="menu-icon">🏷</span>
-              <span class="menu-text">条码维护</span>
-            </router-link>
-          </li>
-          <li class="menu-item system">
-            <router-link to="/dashboard/barcode-config">
-              <span class="menu-icon">⚙</span>
-              <span class="menu-text">条码配置</span>
-            </router-link>
-          </li>
-          <li class="menu-item system">
-            <router-link to="/dashboard/status-view">
-              <span class="menu-icon">📊</span>
-              <span class="menu-text">状态查看</span>
-            </router-link>
-          </li>
-          <li class="menu-item system">
-            <router-link to="/dashboard/statistics">
-              <span class="menu-icon">📈</span>
-              <span class="menu-text">统计分析</span>
-            </router-link>
-          </li>
-          <li class="menu-item logout">
-            <a href="#" @click.prevent="handleLogout">
-              <span class="menu-icon">🚪</span>
-              <span class="menu-text">退出</span>
-            </a>
-          </li>
-        </ul>
+    <div class="header">
+      <div class="header-content">
+        <div class="header-brand">
+          <img src="../assets/images/logo.svg" alt="瓶胚管理系统" class="header-logo">
+          <h1 class="header-title">瓶胚全流程管理系统</h1>
+        </div>
+        <nav class="header-nav">
+          <ul class="nav-menu">
+            <li class="nav-item">
+              <router-link to="/production" class="nav-link">生产</router-link>
+            </li>
+            <li class="nav-item">
+              <router-link to="/delivery" class="nav-link">发货</router-link>
+            </li>
+            <li class="nav-item">
+              <router-link to="/receiving" class="nav-link">收货</router-link>
+            </li>
+            <li class="nav-item">
+              <router-link to="/usage" class="nav-link">使用</router-link>
+            </li>
+            <li class="nav-item">
+              <router-link to="/dashboard/barcode-maintenance" class="nav-link">条码维护</router-link>
+            </li>
+            <li class="nav-item">
+              <router-link to="/dashboard/barcode-config" class="nav-link">条码配置</router-link>
+            </li>
+            <li class="nav-item">
+              <router-link to="/dashboard/status-view" class="nav-link">状态查看</router-link>
+            </li>
+            <li class="nav-item">
+              <router-link to="/dashboard/statistics" class="nav-link">统计分析</router-link>
+            </li>
+            <li class="nav-item">
+              <a href="#" @click.prevent="handleLogout" class="nav-link nav-link--logout">退出</a>
+            </li>
+          </ul>
+        </nav>
       </div>
     </div>
     <router-view />
