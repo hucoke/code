@@ -128,6 +128,28 @@ function initialize() {
       )
     `);
 
+    db.run(`
+      CREATE TABLE IF NOT EXISTS dropdown_options (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        category TEXT NOT NULL,
+        value TEXT NOT NULL,
+        display_order INTEGER DEFAULT 0,
+        created_at TEXT NOT NULL,
+        UNIQUE(category, value)
+      )
+    `);
+
+    db.run(`
+      INSERT OR IGNORE INTO dropdown_options (category, value, display_order, created_at) VALUES
+      ('model', 'PET-500ml', 1, datetime('now')),
+      ('model', 'PET-1000ml', 2, datetime('now')),
+      ('model', 'PET-1500ml', 3, datetime('now')),
+      ('model', 'PET-2000ml', 4, datetime('now')),
+      ('production_line', 'LINE-A', 1, datetime('now')),
+      ('production_line', 'LINE-B', 2, datetime('now')),
+      ('production_line', 'LINE-C', 3, datetime('now'))
+    `);
+
     console.log('Database initialized successfully');
   });
 }
@@ -530,6 +552,64 @@ function saveBarcodeConfig(configKey, configValue, callback) {
   );
 }
 
+function getDropdownOptions(callback) {
+  db.all('SELECT * FROM dropdown_options ORDER BY category, display_order', [], (err, rows) => {
+    if (err) {
+      console.error('Error getting dropdown options:', err.message);
+      callback([]);
+      return;
+    }
+    callback(rows);
+  });
+}
+
+function getDropdownOptionsByCategory(category, callback) {
+  db.all('SELECT * FROM dropdown_options WHERE category = ? ORDER BY display_order', [category], (err, rows) => {
+    if (err) {
+      console.error('Error getting dropdown options by category:', err.message);
+      callback([]);
+      return;
+    }
+    callback(rows);
+  });
+}
+
+function saveDropdownOption(category, value, displayOrder, callback) {
+  const now = new Date().toISOString();
+  db.run(
+    'INSERT OR IGNORE INTO dropdown_options (category, value, display_order, created_at) VALUES (?, ?, ?, ?)',
+    [category, value, displayOrder || 0, now],
+    function(err) {
+      if (err) {
+        console.error('Error saving dropdown option:', err.message);
+      }
+      if (callback) callback(err);
+    }
+  );
+}
+
+function deleteDropdownOption(id, callback) {
+  db.run('DELETE FROM dropdown_options WHERE id = ?', [id], function(err) {
+    if (err) {
+      console.error('Error deleting dropdown option:', err.message);
+    }
+    if (callback) callback(err);
+  });
+}
+
+function updateDropdownOption(id, value, displayOrder, callback) {
+  db.run(
+    'UPDATE dropdown_options SET value = ?, display_order = ? WHERE id = ?',
+    [value, displayOrder || 0, id],
+    function(err) {
+      if (err) {
+        console.error('Error updating dropdown option:', err.message);
+      }
+      if (callback) callback(err);
+    }
+  );
+}
+
 export default {
   db,
   initialize,
@@ -557,5 +637,10 @@ export default {
   getStatistics,
   getModelStatistics,
   getBarcodeConfig,
-  saveBarcodeConfig
+  saveBarcodeConfig,
+  getDropdownOptions,
+  getDropdownOptionsByCategory,
+  saveDropdownOption,
+  deleteDropdownOption,
+  updateDropdownOption
 };

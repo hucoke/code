@@ -66,19 +66,14 @@
           <label for="model">产品型号</label>
           <select id="model" v-model="product.model" required>
             <option value="">请选择产品型号</option>
-            <option value="PET-500ml">PET-500ml</option>
-            <option value="PET-1000ml">PET-1000ml</option>
-            <option value="PET-1500ml">PET-1500ml</option>
-            <option value="PET-2000ml">PET-2000ml</option>
+            <option v-for="option in modelOptions" :key="option.id" :value="option.value">{{ option.value }}</option>
           </select>
         </div>
         <div class="form-group">
           <label for="productionLine">生产线</label>
           <select id="productionLine" v-model="product.productionLine" required>
             <option value="">请选择生产线</option>
-            <option value="LINE-A">LINE-A</option>
-            <option value="LINE-B">LINE-B</option>
-            <option value="LINE-C">LINE-C</option>
+            <option v-for="option in productionLineOptions" :key="option.id" :value="option.value">{{ option.value }}</option>
           </select>
         </div>
       </div>
@@ -233,7 +228,9 @@ export default {
         printWidth: '300',
         printHeight: '200',
         printPadding: '20'
-      }
+      },
+      modelOptions: [],
+      productionLineOptions: []
     }
   },
   mounted() {
@@ -243,12 +240,16 @@ export default {
     async loadData() {
       this.loading = true
       try {
-        const [initResponse, configResponse] = await Promise.all([
+        const [initResponse, configResponse, modelOptionsResponse, lineOptionsResponse] = await Promise.all([
           fetch('/api/barcodes/init-data'),
-          fetch('/api/barcodes/barcode-config')
+          fetch('/api/barcodes/barcode-config'),
+          fetch('/api/barcodes/dropdown-options?category=model'),
+          fetch('/api/barcodes/dropdown-options?category=production_line')
         ])
         const data = await initResponse.json()
         const configData = await configResponse.json()
+        this.modelOptions = await modelOptionsResponse.json()
+        this.productionLineOptions = await lineOptionsResponse.json()
 
         this.sequenceTracker = data.sequenceTracker
         this.productionBatches = data.productionBatches

@@ -289,6 +289,61 @@ router.delete('/barcode-fields/:id', (req, res) => {
   });
 });
 
+router.get('/dropdown-options', (req, res) => {
+  const { category } = req.query;
+  if (category) {
+    db.getDropdownOptionsByCategory(category, (options) => {
+      res.json(options);
+    });
+  } else {
+    db.getDropdownOptions((options) => {
+      res.json(options);
+    });
+  }
+});
+
+router.post('/dropdown-options', (req, res) => {
+  const { category, value, displayOrder } = req.body;
+
+  if (!category || !value) {
+    return res.status(400).json({ error: '缺少必要参数' });
+  }
+
+  db.saveDropdownOption(category, value, displayOrder || 0, (err) => {
+    if (err) {
+      return res.status(500).json({ error: '保存选项失败' });
+    }
+
+    res.json({ success: true, message: '添加成功' });
+  });
+});
+
+router.put('/dropdown-options/:id', (req, res) => {
+  const { value, displayOrder } = req.body;
+
+  if (!value) {
+    return res.status(400).json({ error: '缺少选项值' });
+  }
+
+  db.updateDropdownOption(req.params.id, value, displayOrder || 0, (err) => {
+    if (err) {
+      return res.status(500).json({ error: '更新选项失败' });
+    }
+
+    res.json({ success: true, message: '更新成功' });
+  });
+});
+
+router.delete('/dropdown-options/:id', (req, res) => {
+  db.deleteDropdownOption(req.params.id, (err) => {
+    if (err) {
+      return res.status(500).json({ error: '删除选项失败' });
+    }
+
+    res.json({ success: true, message: '删除成功' });
+  });
+});
+
 router.get('/statistics', (req, res) => {
   db.getStatistics((stats) => {
     db.getModelStatistics((modelStats) => {
