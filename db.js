@@ -139,16 +139,29 @@ function initialize() {
       )
     `);
 
-    db.run(`
-      INSERT OR IGNORE INTO dropdown_options (category, value, display_order, created_at) VALUES
-      ('model', 'PET-500ml', 1, datetime('now')),
-      ('model', 'PET-1000ml', 2, datetime('now')),
-      ('model', 'PET-1500ml', 3, datetime('now')),
-      ('model', 'PET-2000ml', 4, datetime('now')),
-      ('production_line', 'LINE-A', 1, datetime('now')),
-      ('production_line', 'LINE-B', 2, datetime('now')),
-      ('production_line', 'LINE-C', 3, datetime('now'))
-    `);
+    const insertDropdownData = () => {
+      const now = new Date().toISOString();
+      const options = [
+        ['model', 'PET-500ml', 1],
+        ['model', 'PET-1000ml', 2],
+        ['model', 'PET-1500ml', 3],
+        ['model', 'PET-2000ml', 4],
+        ['production_line', 'LINE-A', 1],
+        ['production_line', 'LINE-B', 2],
+        ['production_line', 'LINE-C', 3]
+      ];
+
+      const stmt = db.prepare('INSERT OR IGNORE INTO dropdown_options (category, value, display_order, created_at) VALUES (?, ?, ?, ?)');
+      options.forEach(opt => {
+        stmt.run([opt[0], opt[1], opt[2], now], (err) => {
+          if (err && err.message.indexOf('UNIQUE') === -1) {
+            console.error('Error inserting dropdown option:', err.message);
+          }
+        });
+      });
+      stmt.finalize();
+    };
+    insertDropdownData();
 
     console.log('Database initialized successfully');
   });
@@ -582,6 +595,10 @@ function saveDropdownOption(category, value, displayOrder, callback) {
     function(err) {
       if (err) {
         console.error('Error saving dropdown option:', err.message);
+        if (err.message.indexOf('UNIQUE') !== -1) {
+          if (callback) callback(null);
+          return;
+        }
       }
       if (callback) callback(err);
     }
