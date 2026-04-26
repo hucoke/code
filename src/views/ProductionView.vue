@@ -61,23 +61,36 @@
     </div>
     <div class="card">
       <h2>生产管理 - 生成条码</h2>
-      <div class="form-group">
-        <label for="model">产品型号</label>
-        <select id="model" v-model="product.model" required>
-          <option value="">请选择产品型号</option>
-          <option value="PET-500ml">PET-500ml</option>
-          <option value="PET-1000ml">PET-1000ml</option>
-          <option value="PET-1500ml">PET-1500ml</option>
-          <option value="PET-2000ml">PET-2000ml</option>
-        </select>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="model">产品型号</label>
+          <select id="model" v-model="product.model" required>
+            <option value="">请选择产品型号</option>
+            <option value="PET-500ml">PET-500ml</option>
+            <option value="PET-1000ml">PET-1000ml</option>
+            <option value="PET-1500ml">PET-1500ml</option>
+            <option value="PET-2000ml">PET-2000ml</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="productionLine">生产线</label>
+          <select id="productionLine" v-model="product.productionLine" required>
+            <option value="">请选择生产线</option>
+            <option value="LINE-A">LINE-A</option>
+            <option value="LINE-B">LINE-B</option>
+            <option value="LINE-C">LINE-C</option>
+          </select>
+        </div>
       </div>
-      <div class="form-group">
-        <label for="quantity">生产数量</label>
-        <input type="number" id="quantity" v-model="product.quantity" placeholder="请输入生产数量" min="1" required>
-      </div>
-      <div class="form-group">
-        <label for="productionDate">生产日期</label>
-        <input type="date" id="productionDate" v-model="product.productionDate" required>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="quantity">生产数量</label>
+          <input type="number" id="quantity" v-model="product.quantity" placeholder="请输入生产数量" min="1" required>
+        </div>
+        <div class="form-group date-input-group">
+          <label for="productionDate">生产日期</label>
+          <input type="date" id="productionDate" v-model="product.productionDate" required>
+        </div>
       </div>
       <button class="btn btn-primary" @click="generateBarcodes" :disabled="loading">生成条码</button>
       <button v-if="!viewingBatchDetail" class="btn btn-secondary" @click="printAllBarcodes" :disabled="generatedBarcodes.length === 0 || loading">批量打印全部</button>
@@ -201,6 +214,7 @@ export default {
       product: {
         model: '',
         quantity: '',
+        productionLine: '',
         productionDate: new Date().toISOString().split('T')[0]
       },
       generatedBarcodes: [],
@@ -252,7 +266,7 @@ export default {
       this.$router.push('/')
     },
     async generateBarcodes() {
-      if (!this.product.model || !this.product.quantity || !this.product.productionDate) {
+      if (!this.product.model || !this.product.quantity || !this.product.productionLine || !this.product.productionDate) {
         alert('请填写完整的产品信息')
         return
       }
@@ -267,6 +281,7 @@ export default {
           body: JSON.stringify({
             model: this.product.model,
             quantity: parseInt(this.product.quantity),
+            productionLine: this.product.productionLine,
             productionDate: this.product.productionDate
           })
         })
@@ -614,5 +629,49 @@ export default {
 
 .menu-item.logout > a:hover {
   background-color: #d32f2f;
+}
+
+.form-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  margin-bottom: 15px;
+}
+
+.form-group {
+  flex: 1;
+  min-width: 150px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: 500;
+  color: #555;
+}
+
+.form-group input,
+.form-group select {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: #4CAF50;
+}
+
+.date-input-group {
+  flex: 0 0 auto;
+  min-width: 160px;
+}
+
+.date-input-group input {
+  width: 160px;
 }
 </style>
