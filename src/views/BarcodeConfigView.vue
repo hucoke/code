@@ -1,64 +1,6 @@
 <template>
   <div class="container">
-    <div class="navbar">
-      <h1>瓶胚全流程管理系统</h1>
-      <ul class="main-menu">
-        <li class="menu-item production">
-          <router-link to="/production">
-            <span class="menu-icon">📦</span>
-            <span class="menu-text">生产</span>
-          </router-link>
-        </li>
-        <li class="menu-item logistics">
-          <router-link to="/delivery">
-            <span class="menu-icon">🚚</span>
-            <span class="menu-text">发货</span>
-          </router-link>
-        </li>
-        <li class="menu-item logistics">
-          <router-link to="/receiving">
-            <span class="menu-icon">📥</span>
-            <span class="menu-text">收货</span>
-          </router-link>
-        </li>
-        <li class="menu-item logistics">
-          <router-link to="/usage">
-            <span class="menu-icon">🔧</span>
-            <span class="menu-text">使用</span>
-          </router-link>
-        </li>
-        <li class="menu-item system">
-          <router-link to="/dashboard/barcode-maintenance">
-            <span class="menu-icon">🏷</span>
-            <span class="menu-text">条码维护</span>
-          </router-link>
-        </li>
-        <li class="menu-item system">
-          <router-link to="/dashboard/barcode-config">
-            <span class="menu-icon">⚙</span>
-            <span class="menu-text">条码配置</span>
-          </router-link>
-        </li>
-        <li class="menu-item system">
-          <router-link to="/dashboard/status-view">
-            <span class="menu-icon">📊</span>
-            <span class="menu-text">状态查看</span>
-          </router-link>
-        </li>
-        <li class="menu-item system">
-          <router-link to="/dashboard/statistics">
-            <span class="menu-icon">📈</span>
-            <span class="menu-text">统计分析</span>
-          </router-link>
-        </li>
-        <li class="menu-item logout">
-          <a href="#" @click.prevent="handleLogout">
-            <span class="menu-icon">🚪</span>
-            <span class="menu-text">退出</span>
-          </a>
-        </li>
-      </ul>
-    </div>
+    <div class="content-wrapper">
     <div class="card">
       <h2>条码可视化配置</h2>
 
@@ -97,6 +39,34 @@
       </div>
 
       <div class="config-section">
+        <h3>自定义文本设置</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="customTextTop">条码上方文本</label>
+            <input type="text" id="customTextTop" v-model="config.customTextTop" placeholder="例：产品名称">
+          </div>
+          <div class="form-group">
+            <label for="customTextBottom">条码下方文本</label>
+            <input type="text" id="customTextBottom" v-model="config.customTextBottom" placeholder="例：生产日期">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group checkbox-group">
+            <label>
+              <input type="checkbox" v-model="config.showCustomTextTop" :true-value="'true'" :false-value="'false'">
+              显示上方文本
+            </label>
+          </div>
+          <div class="form-group checkbox-group">
+            <label>
+              <input type="checkbox" v-model="config.showCustomTextBottom" :true-value="'true'" :false-value="'false'">
+              显示下方文本
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="config-section">
         <h3>打印区域设置</h3>
         <div class="form-row">
           <div class="form-group">
@@ -118,8 +88,10 @@
         <h3>预览效果</h3>
         <div class="preview-container">
           <div class="preview-box" :style="previewStyle">
+            <div v-if="config.showCustomTextTop === 'true' && config.customTextTop" class="preview-custom-text preview-text-top">{{ config.customTextTop }}</div>
             <svg ref="previewBarcode"></svg>
             <div class="preview-text">{{ previewCode }}</div>
+            <div v-if="config.showCustomTextBottom === 'true' && config.customTextBottom" class="preview-custom-text preview-text-bottom">{{ config.customTextBottom }}</div>
           </div>
         </div>
       </div>
@@ -151,6 +123,10 @@ export default {
         displayValue: 'true',
         showText: 'true',
         textMargin: '2',
+        customTextTop: '',
+        customTextBottom: '',
+        showCustomTextTop: 'false',
+        showCustomTextBottom: 'true',
         printWidth: '300',
         printHeight: '200',
         printPadding: '20'
@@ -177,7 +153,11 @@ export default {
     'config.fontSize': 'updatePreview',
     'config.margin': 'updatePreview',
     'config.displayValue': 'updatePreview',
-    'config.textMargin': 'updatePreview'
+    'config.textMargin': 'updatePreview',
+    'config.customTextTop': 'updatePreview',
+    'config.customTextBottom': 'updatePreview',
+    'config.showCustomTextTop': 'updatePreview',
+    'config.showCustomTextBottom': 'updatePreview'
   },
   methods: {
     async loadConfig() {
@@ -244,6 +224,10 @@ export default {
         displayValue: 'true',
         showText: 'true',
         textMargin: '2',
+        customTextTop: '',
+        customTextBottom: '',
+        showCustomTextTop: 'false',
+        showCustomTextBottom: 'true',
         printWidth: '300',
         printHeight: '200',
         printPadding: '20'
@@ -304,12 +288,24 @@ export default {
                 font-size: ${fontSize}px;
                 font-weight: bold;
               }
+              .print-custom-text {
+                margin: 8px 0;
+                font-size: ${fontSize}px;
+              }
+              .print-text-top {
+                font-weight: bold;
+              }
+              .print-text-bottom {
+                color: #666;
+              }
             </style>
           </head>
           <body>
             <div class="print-box">
+              ${this.config.showCustomTextTop === 'true' && this.config.customTextTop ? `<div class="print-custom-text print-text-top">${this.config.customTextTop}</div>` : ''}
               ${svgHtml}
               <div class="print-text">${this.previewCode}</div>
+              ${this.config.showCustomTextBottom === 'true' && this.config.customTextBottom ? `<div class="print-custom-text print-text-bottom">${this.config.customTextBottom}</div>` : ''}
             </div>
           </body>
         </html>
@@ -333,6 +329,10 @@ export default {
 </script>
 
 <style scoped>
+.content-wrapper {
+  padding: 0;
+}
+
 .config-section {
   margin-bottom: 30px;
   padding: 20px;
@@ -425,6 +425,20 @@ export default {
   font-size: 14px;
   font-weight: bold;
   color: #333;
+}
+
+.preview-custom-text {
+  margin: 8px 0;
+  font-size: 14px;
+}
+
+.preview-text-top {
+  font-weight: bold;
+  color: #333;
+}
+
+.preview-text-bottom {
+  color: #666;
 }
 
 .button-group {
