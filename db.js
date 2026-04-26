@@ -139,6 +139,15 @@ function initialize() {
       )
     `);
 
+    db.run(`
+      CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE NOT NULL,
+        password TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      )
+    `);
+
     const insertDropdownData = () => {
       const now = new Date().toISOString();
       const options = [
@@ -162,6 +171,25 @@ function initialize() {
       stmt.finalize();
     };
     insertDropdownData();
+
+    const insertUserdata = () => {
+      const now = new Date().toISOString();
+      const users = [
+        ['yifan', 'yifan'],
+        ['yaojiao', 'yaojiao']
+      ];
+
+      const stmt = db.prepare('INSERT OR IGNORE INTO users (username, password, created_at) VALUES (?, ?, ?)');
+      users.forEach(user => {
+        stmt.run([user[0], user[1], now], (err) => {
+          if (err && err.message.indexOf('UNIQUE') === -1) {
+            console.error('Error inserting user:', err.message);
+          }
+        });
+      });
+      stmt.finalize();
+    };
+    insertUserdata();
 
     console.log('Database initialized successfully');
   });
@@ -627,6 +655,95 @@ function updateDropdownOption(id, value, displayOrder, callback) {
   );
 }
 
+function validateUser(username, password, callback) {
+  db.get(
+    'SELECT * FROM users WHERE username = ? AND password = ?',
+    [username, password],
+    function(err, row) {
+      if (err) {
+        console.error('Error validating user:', err.message);
+        callback(null);
+        return;
+      }
+      callback(row);
+    }
+  );
+}
+
+function getAllUsers(callback) {
+  db.all('SELECT id, username, created_at FROM users ORDER BY created_at DESC', [], (err, rows) => {
+    if (err) {
+      console.error('Error getting users:', err.message);
+      callback([]);
+      return;
+    }
+    callback(rows);
+  });
+}
+
+function saveUser(user, callback) {
+  const now = new Date().toISOString();
+  if (user.id) {
+    // 更新用户
+    if (user.password) {
+      db.run(
+        'UPDATE users SET username = ?, password = ? WHERE id = ?',
+        [user.username, user.password, user.id],
+        function(err) {
+          if (err) {
+            console.error('Error updating user:', err.message);
+            callback(err);
+            return;
+          }
+          callback(null);
+        }
+      );
+    } else {
+      db.run(
+        'UPDATE users SET username = ? WHERE id = ?',
+        [user.username, user.id],
+        function(err) {
+          if (err) {
+            console.error('Error updating user:', err.message);
+            callback(err);
+            return;
+          }
+          callback(null);
+        }
+      );
+    }
+  } else {
+    // 添加新用户
+    db.run(
+      'INSERT INTO users (username, password, created_at) VALUES (?, ?, ?)',
+      [user.username, user.password, now],
+      function(err) {
+        if (err) {
+          console.error('Error adding user:', err.message);
+          callback(err);
+          return;
+        }
+        callback(null);
+      }
+    );
+  }
+}
+
+function deleteUser(userId, callback) {
+  db.run(
+    'DELETE FROM users WHERE id = ?',
+    [userId],
+    function(err) {
+      if (err) {
+        console.error('Error deleting user:', err.message);
+        callback(err);
+        return;
+      }
+      callback(null);
+    }
+  );
+}
+
 export default {
   db,
   initialize,
@@ -659,5 +776,9 @@ export default {
   getDropdownOptionsByCategory,
   saveDropdownOption,
   deleteDropdownOption,
-  updateDropdownOption
+  updateDropdownOption,
+  validateUser,
+  getAllUsers,
+  saveUser,
+  deleteUser
 };

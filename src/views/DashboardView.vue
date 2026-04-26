@@ -33,6 +33,9 @@
               <router-link to="/dashboard/statistics" class="nav-link">统计分析</router-link>
             </li>
             <li class="nav-item">
+              <router-link to="/dashboard/user-management" class="nav-link">用户管理</router-link>
+            </li>
+            <li class="nav-item">
               <a href="#" @click.prevent="handleLogout" class="nav-link nav-link--logout">退出</a>
             </li>
           </ul>

@@ -10,7 +10,12 @@
         <label for="password">密码</label>
         <input type="password" id="password" v-model="password" required>
       </div>
-      <button type="submit" class="btn btn-primary" style="width: 100%;">登录</button>
+      <button type="submit" class="btn btn-primary" style="width: 100%;" :disabled="loading">
+        {{ loading ? '登录中...' : '登录' }}
+      </button>
+      <div v-if="error" class="error-message">
+        {{ error }}
+      </div>
     </form>
   </div>
 </template>
@@ -20,19 +25,53 @@ export default {
   data() {
     return {
       username: '',
-      password: ''
+      password: '',
+      loading: false,
+      error: ''
     }
   },
   methods: {
-    handleLogin() {
-      // 模拟登录验证
-      if (this.username && this.password) {
-        // 存储登录状态
-        localStorage.setItem('loggedIn', 'true');
-        // 跳转到仪表板
-        this.$router.push('/dashboard/barcode-maintenance');
+    async handleLogin() {
+      this.error = '';
+      this.loading = true;
+      
+      try {
+        const response = await fetch('http://localhost:3000/api/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ username: this.username, password: this.password })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          // 存储登录状态
+          localStorage.setItem('loggedIn', 'true');
+          localStorage.setItem('username', this.username);
+          // 跳转到生产页面
+          console.log('登录成功，准备跳转到生产页面');
+          this.$router.push('/production');
+        } else {
+          this.error = data.message;
+        }
+      } catch (err) {
+        this.error = '登录失败，请检查网络连接';
+        console.error('登录错误:', err);
+      } finally {
+        this.loading = false;
       }
     }
   }
 }
 </script>
+
+<style scoped>
+.error-message {
+  color: #dc3545;
+  margin-top: 10px;
+  text-align: center;
+  font-size: 14px;
+}
+</style>
