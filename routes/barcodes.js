@@ -68,7 +68,16 @@ router.post('/generate', (req, res) => {
     return res.status(400).json({ error: '缺少必要参数' });
   }
 
-  const modelCode = MODEL_CODES[model];
+  let modelCode;
+  if (MODEL_CODES[model]) {
+    modelCode = MODEL_CODES[model];
+  } else {
+    modelCode = model.replace(/[^a-zA-Z0-9]/g, '');
+    if (modelCode.length > 10) {
+      modelCode = modelCode.substring(0, 10);
+    }
+  }
+
   if (!modelCode) {
     return res.status(400).json({ error: '无效的产品型号' });
   }
