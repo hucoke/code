@@ -22,6 +22,9 @@
         </div>
         <div class="button-group">
           <button class="btn btn-primary" @click="addDropdownOption">添加选项</button>
+          <button class="btn btn-info" @click="exportDropdownOptions">导出选项</button>
+          <input type="file" ref="dropdownFileInput" style="display: none" accept=".json" @change="importDropdownOptions">
+          <button class="btn btn-success" @click="$refs.dropdownFileInput.click()">导入选项</button>
         </div>
       </div>
 
@@ -72,6 +75,9 @@
       </div>
       <div class="button-group">
         <button class="btn btn-primary" @click="addField">添加字段</button>
+        <button class="btn btn-info" @click="exportFields">导出字段</button>
+        <input type="file" ref="fieldsFileInput" style="display: none" accept=".json" @change="importFields">
+        <button class="btn btn-success" @click="$refs.fieldsFileInput.click()">导入字段</button>
       </div>
 
       <h3>现有字段</h3>
@@ -282,6 +288,177 @@ export default {
         console.error('删除选项失败:', error)
         alert('删除失败')
       }
+    },
+    exportDropdownOptions() {
+      const data = {
+        options: this.dropdownOptions,
+        exportDate: new Date().toISOString(),
+        version: '1.0'
+      }
+      
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `dropdown-options-${new Date().toISOString().split('T')[0]}.json`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    },
+    async importDropdownOptions(event) {
+      const file = event.target.files[0]
+      if (!file) return
+      
+      try {
+        const reader = new FileReader()
+        reader.onload = async (e) => {
+          try {
+            const data = JSON.parse(e.target.result)
+            const options = data.options || []
+            
+            if (options.length === 0) {
+              alert('导入文件中没有选项数据')
+              return
+            }
+            
+            if (confirm(`确定要导入 ${options.length} 个选项吗？这将覆盖现有数据。`)) {
+              // 先删除所有现有选项
+              for (const option of this.dropdownOptions) {
+                try {
+                  await fetch(`/api/barcodes/dropdown-options/${option.id}`, {
+                    method: 'DELETE'
+                  })
+                } catch (error) {
+                  console.error('删除选项失败:', error)
+                }
+              }
+              
+              // 导入新选项
+              let successCount = 0
+              for (const option of options) {
+                try {
+                  const response = await fetch('/api/barcodes/dropdown-options', {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                      category: option.category,
+                      value: option.value,
+                      displayOrder: option.display_order || option.displayOrder || 0
+                    })
+                  })
+                  
+                  if (response.ok) {
+                    successCount++
+                  }
+                } catch (error) {
+                  console.error('导入选项失败:', error)
+                }
+              }
+              
+              await this.loadDropdownOptions()
+              alert(`导入完成！成功导入 ${successCount} 个选项`)
+            }
+          } catch (error) {
+            console.error('解析文件失败:', error)
+            alert('导入文件格式错误，请确保是有效的JSON文件')
+          }
+        }
+        reader.readAsText(file)
+      } catch (error) {
+        console.error('导入失败:', error)
+        alert('导入失败')
+      }
+      
+      // 重置文件输入
+      event.target.value = ''
+    },
+    exportFields() {
+      const data = {
+        fields: this.fields,
+        exportDate: new Date().toISOString(),
+        version: '1.0'
+      }
+      
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `barcode-fields-${new Date().toISOString().split('T')[0]}.json`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    },
+    async importFields(event) {
+      const file = event.target.files[0]
+      if (!file) return
+      
+      try {
+        const reader = new FileReader()
+        reader.onload = async (e) => {
+          try {
+            const data = JSON.parse(e.target.result)
+            const fields = data.fields || []
+            
+            if (fields.length === 0) {
+              alert('导入文件中没有字段数据')
+              return
+            }
+            
+            if (confirm(`确定要导入 ${fields.length} 个字段吗？这将覆盖现有数据。`)) {
+              // 先删除所有现有字段
+              for (const field of this.fields) {
+                try {
+                  await fetch(`/api/barcodes/barcode-fields/${field.id}`, {
+                    method: 'DELETE'
+                  })
+                } catch (error) {
+                  console.error('删除字段失败:', error)
+                }
+              }
+              
+              // 导入新字段
+              let successCount = 0
+              for (const field of fields) {
+                try {
+                  const response = await fetch('/api/barcodes/barcode-fields', {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                      name: field.name,
+                      type: field.type
+                    })
+                  })
+                  
+                  if (response.ok) {
+                    successCount++
+                  }
+                } catch (error) {
+                  console.error('导入字段失败:', error)
+                }
+              }
+              
+              await this.loadFields()
+              alert(`导入完成！成功导入 ${successCount} 个字段`)
+            }
+          } catch (error) {
+            console.error('解析文件失败:', error)
+            alert('导入文件格式错误，请确保是有效的JSON文件')
+          }
+        }
+        reader.readAsText(file)
+      } catch (error) {
+        console.error('导入失败:', error)
+        alert('导入失败')
+      }
+      
+      // 重置文件输入
+      event.target.value = ''
     }
   }
 }
