@@ -18,6 +18,10 @@
             <input type="text" id="dropdownValue" v-model="newOption.value" placeholder="请输入选项值">
           </div>
           <div class="form-group">
+            <label for="dropdownAbbreviation">缩写</label>
+            <input type="text" id="dropdownAbbreviation" v-model="newOption.abbreviation" placeholder="请输入缩写（用于二维码编码）">
+          </div>
+          <div class="form-group">
             <label for="dropdownOrder">排序</label>
             <input type="number" id="dropdownOrder" v-model.number="newOption.displayOrder" placeholder="排序序号">
           </div>
@@ -37,6 +41,7 @@
             <thead>
               <tr>
                 <th>排序</th>
+                <th>缩写</th>
                 <th>选项值</th>
                 <th>操作</th>
               </tr>
@@ -44,6 +49,10 @@
             <tbody>
               <tr v-for="option in filteredOptions" :key="option.id">
                 <td>{{ option.display_order }}</td>
+                <td>
+                  <span v-if="editingId !== option.id">{{ option.abbreviation || '-' }}</span>
+                  <input v-else type="text" v-model="editAbbreviation" class="edit-input">
+                </td>
                 <td>
                   <span v-if="editingId !== option.id">{{ option.value }}</span>
                   <input v-else type="text" v-model="editValue" class="edit-input">
@@ -119,10 +128,12 @@ export default {
       selectedCategory: '',
       newOption: {
         value: '',
+        abbreviation: '',
         displayOrder: 0
       },
       editingId: null,
-      editValue: ''
+      editValue: '',
+      editAbbreviation: ''
     }
   },
   computed: {
@@ -220,13 +231,14 @@ export default {
           body: JSON.stringify({
             category: this.selectedCategory,
             value: this.newOption.value,
+            abbreviation: this.newOption.abbreviation || '',
             displayOrder: this.newOption.displayOrder || 0
           })
         })
 
         if (response.ok) {
           await this.loadDropdownOptions()
-          this.newOption = { value: '', displayOrder: 0 }
+          this.newOption = { value: '', abbreviation: '', displayOrder: 0 }
         } else {
           const error = await response.json()
           alert(error.error || '添加失败')
@@ -239,10 +251,12 @@ export default {
     startEdit(option) {
       this.editingId = option.id
       this.editValue = option.value
+      this.editAbbreviation = option.abbreviation || ''
     },
     cancelEdit() {
       this.editingId = null
       this.editValue = ''
+      this.editAbbreviation = ''
     },
     async saveEdit(id) {
       if (!this.editValue) {
@@ -259,6 +273,7 @@ export default {
           },
           body: JSON.stringify({
             value: this.editValue,
+            abbreviation: this.editAbbreviation || '',
             displayOrder: option.display_order
           })
         })
@@ -267,6 +282,7 @@ export default {
           await this.loadDropdownOptions()
           this.editingId = null
           this.editValue = ''
+          this.editAbbreviation = ''
         } else {
           alert('更新失败')
         }

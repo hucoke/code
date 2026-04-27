@@ -46,14 +46,14 @@
           <label for="supplier">供应商</label>
           <select id="supplier" v-model="product.supplier" @change="onSupplierChange">
             <option value="">请选择供应商</option>
-            <option v-for="option in supplierOptions" :key="option.id" :value="option.value">{{ option.value }}</option>
+            <option v-for="option in supplierOptions" :key="option.id" :value="option.value">{{ option.abbreviation ? option.abbreviation + '：' + option.value : option.value }}</option>
           </select>
         </div>
         <div class="form-group">
           <label for="productionLine">生产线</label>
           <select id="productionLine" v-model="product.productionLine" @change="onProductionLineChange" :disabled="!product.supplier">
             <option value="">请选择生产线</option>
-            <option v-for="option in filteredProductionLines" :key="option.id" :value="option.value">{{ option.value }}</option>
+            <option v-for="option in filteredProductionLines" :key="option.id" :value="option.value">{{ option.abbreviation ? option.abbreviation + '：' + option.value : option.value }}</option>
           </select>
         </div>
       </div>
@@ -62,14 +62,14 @@
           <label for="model">产品型号</label>
           <select id="model" v-model="product.model" :disabled="!product.productionLine">
             <option value="">请选择产品型号</option>
-            <option v-for="option in filteredModels" :key="option.id" :value="option.value">{{ option.value }}</option>
+            <option v-for="option in filteredModels" :key="option.id" :value="option.value">{{ option.abbreviation ? option.abbreviation + '：' + option.value : option.value }}</option>
           </select>
         </div>
         <div class="form-group">
           <label for="rawMaterial">原料名称</label>
           <select id="rawMaterial" v-model="product.rawMaterial">
             <option value="">请选择原料名称</option>
-            <option v-for="option in rawMaterialOptions" :key="option.id" :value="option.value">{{ option.value }}</option>
+            <option v-for="option in rawMaterialOptions" :key="option.id" :value="option.value">{{ option.abbreviation ? option.abbreviation + '：' + option.value : option.value }}</option>
           </select>
         </div>
       </div>
