@@ -1,14 +1,11 @@
 <template>
   <div class="user-management-content">
     <h2>用户管理</h2>
-    
     <div class="user-actions">
       <button @click="showAddUserForm = true" class="btn btn-primary">添加用户</button>
     </div>
-
     <div v-if="loading" class="loading">加载中...</div>
-    
-    <div v-else class="user-list">
+    <div v-else>
       <table class="user-table">
         <thead>
           <tr>
@@ -31,19 +28,17 @@
         </tbody>
       </table>
     </div>
-
-    <!-- 添加/编辑用户弹窗 -->
     <div v-if="showAddUserForm || showEditUserForm" class="modal-overlay">
       <div class="modal">
         <h3>{{ showEditUserForm ? '编辑用户' : '添加用户' }}</h3>
         <form @submit.prevent="saveUser">
           <div class="form-group">
-            <label for="username">用户名</label>
-            <input type="text" id="username" v-model="formData.username" required>
+            <label>用户名</label>
+            <input type="text" v-model="formData.username" required>
           </div>
           <div class="form-group">
-            <label for="password">密码</label>
-            <input type="password" id="password" v-model="formData.password" :required="!showEditUserForm">
+            <label>密码</label>
+            <input type="password" v-model="formData.password" :required="!showEditUserForm">
             <small v-if="showEditUserForm">留空表示不修改密码</small>
           </div>
           <div class="modal-actions">
@@ -91,15 +86,6 @@ export default {
       } finally {
         this.loading = false;
       }
-    },
-    addUser() {
-      this.formData = {
-        id: null,
-        username: '',
-        password: ''
-      };
-      this.showAddUserForm = true;
-      this.showEditUserForm = false;
     },
     editUser(user) {
       this.formData = {

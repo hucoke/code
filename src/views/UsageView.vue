@@ -135,10 +135,13 @@ export default {
       this.$router.push('/')
     },
     async startScanner() {
-      this.showScannerModal = true
-      this.scannerActive = true
-      
       try {
+        this.showScannerModal = true
+        this.scannerActive = true
+        
+        // 等待DOM更新，确保scanner-region元素已渲染
+        await this.$nextTick()
+        
         this.html5QrCode = new Html5Qrcode('scanner-region')
         
         await this.html5QrCode.start(
