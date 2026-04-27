@@ -71,6 +71,8 @@
         <button class="btn btn-primary" @click="generateBarcodes" :disabled="loading">生成编码</button>
         <button v-if="!viewingBatchDetail" class="btn btn-secondary" @click="printAllBarcodes" :disabled="generatedBarcodes.length === 0 || loading">批量打印全部</button>
         <button v-if="viewingBatchDetail" class="btn btn-secondary" @click="printAllBarcodes" :disabled="currentViewingBatch === null || loading">重新打印本批次</button>
+        <button class="btn btn-info" @click="syncData" :disabled="loading">同步数据</button>
+        <button class="btn btn-danger" @click="clearLocalData" :disabled="loading">清除本地数据</button>
       </div>
 
       <div v-if="loading" style="margin-top: 20px; color: #666;">处理中...</div>
@@ -255,6 +257,17 @@ export default {
     async loadData() {
       this.loading = true
       try {
+        // 尝试从本地存储加载数据
+        const localModelOptions = localStorage.getItem('modelOptions')
+        const localProductionLineOptions = localStorage.getItem('productionLineOptions')
+        
+        if (localModelOptions && localProductionLineOptions) {
+          this.modelOptions = JSON.parse(localModelOptions)
+          this.productionLineOptions = JSON.parse(localProductionLineOptions)
+          console.log('从本地存储加载数据成功')
+        }
+        
+        // 从服务器获取其他数据
         const [initResponse, configResponse, modelOptionsResponse, lineOptionsResponse] = await Promise.all([
           fetch('/api/barcodes/init-data'),
           fetch('/api/barcodes/barcode-config'),
@@ -263,16 +276,34 @@ export default {
         ])
         const data = await initResponse.json()
         const configData = await configResponse.json()
-        this.modelOptions = await modelOptionsResponse.json()
-        this.productionLineOptions = await lineOptionsResponse.json()
+        const modelOptions = await modelOptionsResponse.json()
+        const productionLineOptions = await lineOptionsResponse.json()
 
+        // 保存到本地存储
+        localStorage.setItem('modelOptions', JSON.stringify(modelOptions))
+        localStorage.setItem('productionLineOptions', JSON.stringify(productionLineOptions))
+        
+        // 更新数据
+        this.modelOptions = modelOptions
+        this.productionLineOptions = productionLineOptions
         this.sequenceTracker = data.sequenceTracker
         this.productionBatches = data.productionBatches
         this.printedBatches = new Set(data.printedBatches)
         this.barcodeConfig = { ...this.barcodeConfig, ...configData }
       } catch (error) {
         console.error('加载数据失败:', error)
-        alert('加载数据失败，请检查服务器是否运行')
+        // 如果服务器加载失败，尝试使用本地存储的数据
+        const localModelOptions = localStorage.getItem('modelOptions')
+        const localProductionLineOptions = localStorage.getItem('productionLineOptions')
+        
+        if (localModelOptions && localProductionLineOptions) {
+          this.modelOptions = JSON.parse(localModelOptions)
+          this.productionLineOptions = JSON.parse(localProductionLineOptions)
+          console.log('服务器加载失败，使用本地存储数据')
+          alert('服务器加载失败，使用本地存储数据')
+        } else {
+          alert('加载数据失败，请检查服务器是否运行')
+        }
       } finally {
         this.loading = false
       }
@@ -563,6 +594,37 @@ export default {
         this.printSingleBarcode(this.previewBarcode)
       }
       this.closePreviewModal()
+    },
+    async syncData() {
+      try {
+        const [modelOptionsResponse, lineOptionsResponse] = await Promise.all([
+          fetch('/api/barcodes/dropdown-options?category=model'),
+          fetch('/api/barcodes/dropdown-options?category=production_line')
+        ])
+        
+        const modelOptions = await modelOptionsResponse.json()
+        const productionLineOptions = await lineOptionsResponse.json()
+        
+        // 保存到本地存储
+        localStorage.setItem('modelOptions', JSON.stringify(modelOptions))
+        localStorage.setItem('productionLineOptions', JSON.stringify(productionLineOptions))
+        
+        // 更新当前数据
+        this.modelOptions = modelOptions
+        this.productionLineOptions = productionLineOptions
+        
+        alert('数据同步成功！')
+      } catch (error) {
+        console.error('同步数据失败:', error)
+        alert('同步数据失败，请检查服务器是否运行')
+      }
+    },
+    clearLocalData() {
+      if (confirm('确定要清除本地数据吗？这将删除所有保存在本地的产品型号和生产线数据。')) {
+        localStorage.removeItem('modelOptions')
+        localStorage.removeItem('productionLineOptions')
+        alert('本地数据已清除！')
+      }
     },
     isBatchPrinted(batchCode) {
       return this.printedBatches.has(batchCode)
