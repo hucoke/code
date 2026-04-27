@@ -4,7 +4,10 @@
       <div class="header-content">
         <div class="header-brand">
           <img src="../assets/images/logo.svg" alt="瓶胚管理系统" class="header-logo">
-          <h1 class="header-title">瓶胚全流程管理系统</h1>
+          <div class="header-brand-text">
+            <h1 class="header-title">瓶胚全流程管理系统</h1>
+            <span class="header-version">版本 {{ version }} | 最后更新: {{ lastUpdate }}</span>
+          </div>
         </div>
         <nav class="header-nav">
           <ul class="nav-menu">
@@ -47,7 +50,15 @@
 </template>
 
 <script>
+import versionInfo from '../version.json'
+
 export default {
+  data() {
+    return {
+      version: versionInfo.version,
+      lastUpdate: versionInfo.lastUpdate
+    }
+  },
   methods: {
     handleLogout() {
       localStorage.removeItem('loggedIn');
@@ -61,3 +72,16 @@ export default {
   }
 }
 </script>
+
+<style scoped>
+.header-brand-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.header-version {
+  font-size: 12px;
+  color: #999;
+  margin-top: 2px;
+}
+</style>
