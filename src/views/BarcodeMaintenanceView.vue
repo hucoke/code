@@ -6,8 +6,10 @@
           <label for="dropdownCategory">选项类别</label>
           <select id="dropdownCategory" v-model="selectedCategory">
             <option value="">选择类别</option>
-            <option value="model">产品型号</option>
+            <option value="supplier">供应商</option>
             <option value="production_line">生产线</option>
+            <option value="model">产品型号</option>
+            <option value="raw_material">原料名称</option>
           </select>
         </div>
         <div class="form-row">
@@ -136,8 +138,10 @@ export default {
   methods: {
     getCategoryName(category) {
       const names = {
+        'supplier': '供应商',
+        'production_line': '生产线',
         'model': '产品型号',
-        'production_line': '生产线'
+        'raw_material': '原料名称'
       }
       return names[category] || category
     },

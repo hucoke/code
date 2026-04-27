@@ -43,28 +43,44 @@
       <h2>生产管理 - 生成编码</h2>
       <div class="form-row">
         <div class="form-group">
-          <label for="model">产品型号</label>
-          <select id="model" v-model="product.model" required>
-            <option value="">请选择产品型号</option>
-            <option v-for="option in modelOptions" :key="option.id" :value="option.value">{{ option.value }}</option>
+          <label for="supplier">供应商</label>
+          <select id="supplier" v-model="product.supplier" @change="onSupplierChange">
+            <option value="">请选择供应商</option>
+            <option v-for="option in supplierOptions" :key="option.id" :value="option.value">{{ option.value }}</option>
           </select>
         </div>
         <div class="form-group">
           <label for="productionLine">生产线</label>
-          <select id="productionLine" v-model="product.productionLine" required>
+          <select id="productionLine" v-model="product.productionLine" @change="onProductionLineChange" :disabled="!product.supplier">
             <option value="">请选择生产线</option>
-            <option v-for="option in productionLineOptions" :key="option.id" :value="option.value">{{ option.value }}</option>
+            <option v-for="option in filteredProductionLines" :key="option.id" :value="option.value">{{ option.value }}</option>
           </select>
         </div>
       </div>
       <div class="form-row">
         <div class="form-group">
-          <label for="quantity">生产数量</label>
-          <input type="number" id="quantity" v-model="product.quantity" placeholder="请输入生产数量" min="1" required>
+          <label for="model">产品型号</label>
+          <select id="model" v-model="product.model" :disabled="!product.productionLine">
+            <option value="">请选择产品型号</option>
+            <option v-for="option in filteredModels" :key="option.id" :value="option.value">{{ option.value }}</option>
+          </select>
         </div>
+        <div class="form-group">
+          <label for="rawMaterial">原料名称</label>
+          <select id="rawMaterial" v-model="product.rawMaterial">
+            <option value="">请选择原料名称</option>
+            <option v-for="option in rawMaterialOptions" :key="option.id" :value="option.value">{{ option.value }}</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
         <div class="form-group date-input-group">
           <label for="productionDate">生产日期</label>
           <input type="date" id="productionDate" v-model="product.productionDate" required>
+        </div>
+        <div class="form-group">
+          <label for="quantity">生产数量</label>
+          <input type="number" id="quantity" v-model="product.quantity" placeholder="请输入生产数量" min="1" required>
         </div>
       </div>
       <div class="button-group">
@@ -222,10 +238,12 @@ export default {
   data() {
     return {
       product: {
-        model: '',
-        quantity: '',
+        supplier: '',
         productionLine: '',
-        productionDate: new Date().toISOString().split('T')[0]
+        model: '',
+        rawMaterial: '',
+        productionDate: new Date().toISOString().split('T')[0],
+        quantity: ''
       },
       generatedBarcodes: [],
       productionBatches: [],
@@ -246,8 +264,30 @@ export default {
       },
       modelOptions: [],
       productionLineOptions: [],
+      supplierOptions: [],
+      rawMaterialOptions: [],
       showPreviewModal: false,
       previewBarcode: {}
+    }
+  },
+  computed: {
+    filteredProductionLines() {
+      if (!this.product.supplier) {
+        return this.productionLineOptions
+      }
+      return this.productionLineOptions.filter(opt => {
+        return opt.supplier === this.product.supplier || !opt.supplier
+      })
+    },
+    filteredModels() {
+      if (!this.product.productionLine) {
+        return this.modelOptions
+      }
+      return this.modelOptions.filter(opt => {
+        return opt.productionLine === this.product.productionLine || 
+               opt.supplier === this.product.supplier ||
+               !opt.productionLine && !opt.supplier
+      })
     }
   },
   mounted() {
@@ -260,32 +300,44 @@ export default {
         // 尝试从本地存储加载数据
         const localModelOptions = localStorage.getItem('modelOptions')
         const localProductionLineOptions = localStorage.getItem('productionLineOptions')
+        const localSupplierOptions = localStorage.getItem('supplierOptions')
+        const localRawMaterialOptions = localStorage.getItem('rawMaterialOptions')
         
-        if (localModelOptions && localProductionLineOptions) {
+        if (localModelOptions && localProductionLineOptions && localSupplierOptions && localRawMaterialOptions) {
           this.modelOptions = JSON.parse(localModelOptions)
           this.productionLineOptions = JSON.parse(localProductionLineOptions)
+          this.supplierOptions = JSON.parse(localSupplierOptions)
+          this.rawMaterialOptions = JSON.parse(localRawMaterialOptions)
           console.log('从本地存储加载数据成功')
         }
         
         // 从服务器获取其他数据
-        const [initResponse, configResponse, modelOptionsResponse, lineOptionsResponse] = await Promise.all([
+        const [initResponse, configResponse, modelOptionsResponse, lineOptionsResponse, supplierOptionsResponse, rawMaterialOptionsResponse] = await Promise.all([
           fetch('/api/barcodes/init-data'),
           fetch('/api/barcodes/barcode-config'),
           fetch('/api/barcodes/dropdown-options?category=model'),
-          fetch('/api/barcodes/dropdown-options?category=production_line')
+          fetch('/api/barcodes/dropdown-options?category=production_line'),
+          fetch('/api/barcodes/dropdown-options?category=supplier'),
+          fetch('/api/barcodes/dropdown-options?category=raw_material')
         ])
         const data = await initResponse.json()
         const configData = await configResponse.json()
         const modelOptions = await modelOptionsResponse.json()
         const productionLineOptions = await lineOptionsResponse.json()
+        const supplierOptions = await supplierOptionsResponse.json()
+        const rawMaterialOptions = await rawMaterialOptionsResponse.json()
 
         // 保存到本地存储
         localStorage.setItem('modelOptions', JSON.stringify(modelOptions))
         localStorage.setItem('productionLineOptions', JSON.stringify(productionLineOptions))
+        localStorage.setItem('supplierOptions', JSON.stringify(supplierOptions))
+        localStorage.setItem('rawMaterialOptions', JSON.stringify(rawMaterialOptions))
         
         // 更新数据
         this.modelOptions = modelOptions
         this.productionLineOptions = productionLineOptions
+        this.supplierOptions = supplierOptions
+        this.rawMaterialOptions = rawMaterialOptions
         this.sequenceTracker = data.sequenceTracker
         this.productionBatches = data.productionBatches
         this.printedBatches = new Set(data.printedBatches)
@@ -295,10 +347,14 @@ export default {
         // 如果服务器加载失败，尝试使用本地存储的数据
         const localModelOptions = localStorage.getItem('modelOptions')
         const localProductionLineOptions = localStorage.getItem('productionLineOptions')
+        const localSupplierOptions = localStorage.getItem('supplierOptions')
+        const localRawMaterialOptions = localStorage.getItem('rawMaterialOptions')
         
-        if (localModelOptions && localProductionLineOptions) {
+        if (localModelOptions && localProductionLineOptions && localSupplierOptions && localRawMaterialOptions) {
           this.modelOptions = JSON.parse(localModelOptions)
           this.productionLineOptions = JSON.parse(localProductionLineOptions)
+          this.supplierOptions = JSON.parse(localSupplierOptions)
+          this.rawMaterialOptions = JSON.parse(localRawMaterialOptions)
           console.log('服务器加载失败，使用本地存储数据')
           alert('服务器加载失败，使用本地存储数据')
         } else {
@@ -307,6 +363,13 @@ export default {
       } finally {
         this.loading = false
       }
+    },
+    onSupplierChange() {
+      this.product.productionLine = ''
+      this.product.model = ''
+    },
+    onProductionLineChange() {
+      this.product.model = ''
     },
     handleLogout() {
       localStorage.removeItem('loggedIn')
@@ -597,21 +660,29 @@ export default {
     },
     async syncData() {
       try {
-        const [modelOptionsResponse, lineOptionsResponse] = await Promise.all([
+        const [modelOptionsResponse, lineOptionsResponse, supplierOptionsResponse, rawMaterialOptionsResponse] = await Promise.all([
           fetch('/api/barcodes/dropdown-options?category=model'),
-          fetch('/api/barcodes/dropdown-options?category=production_line')
+          fetch('/api/barcodes/dropdown-options?category=production_line'),
+          fetch('/api/barcodes/dropdown-options?category=supplier'),
+          fetch('/api/barcodes/dropdown-options?category=raw_material')
         ])
         
         const modelOptions = await modelOptionsResponse.json()
         const productionLineOptions = await lineOptionsResponse.json()
+        const supplierOptions = await supplierOptionsResponse.json()
+        const rawMaterialOptions = await rawMaterialOptionsResponse.json()
         
         // 保存到本地存储
         localStorage.setItem('modelOptions', JSON.stringify(modelOptions))
         localStorage.setItem('productionLineOptions', JSON.stringify(productionLineOptions))
+        localStorage.setItem('supplierOptions', JSON.stringify(supplierOptions))
+        localStorage.setItem('rawMaterialOptions', JSON.stringify(rawMaterialOptions))
         
         // 更新当前数据
         this.modelOptions = modelOptions
         this.productionLineOptions = productionLineOptions
+        this.supplierOptions = supplierOptions
+        this.rawMaterialOptions = rawMaterialOptions
         
         alert('数据同步成功！')
       } catch (error) {
@@ -620,9 +691,11 @@ export default {
       }
     },
     clearLocalData() {
-      if (confirm('确定要清除本地数据吗？这将删除所有保存在本地的产品型号和生产线数据。')) {
+      if (confirm('确定要清除本地数据吗？这将删除所有保存在本地的数据。')) {
         localStorage.removeItem('modelOptions')
         localStorage.removeItem('productionLineOptions')
+        localStorage.removeItem('supplierOptions')
+        localStorage.removeItem('rawMaterialOptions')
         alert('本地数据已清除！')
       }
     },
