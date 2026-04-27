@@ -24,10 +24,10 @@
               <router-link to="/usage" class="nav-link">使用</router-link>
             </li>
             <li class="nav-item">
-              <router-link to="/dashboard/barcode-maintenance" class="nav-link">条码维护</router-link>
+              <router-link to="/dashboard/barcode-maintenance" class="nav-link">编码维护</router-link>
             </li>
             <li class="nav-item">
-              <router-link to="/dashboard/barcode-config" class="nav-link">条码配置</router-link>
+              <router-link to="/dashboard/barcode-config" class="nav-link">编码配置</router-link>
             </li>
             <li class="nav-item">
               <router-link to="/dashboard/status-view" class="nav-link">状态查看</router-link>

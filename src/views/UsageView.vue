@@ -21,10 +21,10 @@
               <router-link to="/usage" class="nav-link">使用</router-link>
             </li>
             <li class="nav-item">
-              <router-link to="/dashboard/barcode-maintenance" class="nav-link">条码维护</router-link>
+              <router-link to="/dashboard/barcode-maintenance" class="nav-link">编码维护</router-link>
             </li>
             <li class="nav-item">
-              <router-link to="/dashboard/barcode-config" class="nav-link">条码配置</router-link>
+              <router-link to="/dashboard/barcode-config" class="nav-link">编码配置</router-link>
             </li>
             <li class="nav-item">
               <router-link to="/dashboard/status-view" class="nav-link">状态查看</router-link>
@@ -42,9 +42,9 @@
     <div class="card">
       <h2>使用管理 - 扫码使用</h2>
       <div class="scan-area">
-        <h3>请扫描瓶胚框上的条码</h3>
+        <h3>请扫描瓶胚框上的编码</h3>
         <div class="form-group">
-          <input type="text" v-model="scannedBarcode" placeholder="或手动输入条码" @keyup.enter="processUsage">
+          <input type="text" v-model="scannedBarcode" placeholder="或手动输入编码" @keyup.enter="processUsage">
         </div>
         <div class="button-group">
           <button class="btn btn-primary" @click="startScanner" :disabled="scannerActive">
@@ -57,7 +57,7 @@
       <div v-if="usageResult" class="card" style="margin-top: 20px;">
         <h3>使用结果</h3>
         <p v-if="usageResult.success" style="color: green;">
-          条码 {{ usageResult.barcode }} 使用成功！
+          编码 {{ usageResult.barcode }} 使用成功！
         </p>
         <p v-else style="color: red;">
           {{ usageResult.message }}
@@ -69,7 +69,7 @@
         <table>
           <thead>
             <tr>
-              <th>条码</th>
+              <th>编码</th>
               <th>产品型号</th>
               <th>使用日期</th>
               <th>使用时间</th>
@@ -94,7 +94,7 @@
           <button class="close-btn" @click="stopScanner">&times;</button>
         </div>
         <div id="scanner-region" class="scanner-region"></div>
-        <p class="scanner-hint">将条码对准摄像头进行扫描</p>
+        <p class="scanner-hint">将编码对准摄像头进行扫描</p>
       </div>
     </div>
   </div>
@@ -144,25 +144,66 @@ export default {
         
         this.html5QrCode = new Html5Qrcode('scanner-region')
         
-        await this.html5QrCode.start(
+        // 尝试多种摄像头模式，确保在不同环境下都能工作
+        let scannerStarted = false
+        const cameraModes = [
           { facingMode: 'environment' },
-          {
-            fps: 10,
-            qrbox: { width: 250, height: 150 },
-            aspectRatio: 1.777778
-          },
-          (decodedText) => {
-            this.scannedBarcode = decodedText
-            this.stopScanner()
-            this.processUsage()
-          },
-          (errorMessage) => {
-            console.log('扫码中...')
+          { facingMode: 'user' },
+          undefined
+        ]
+        
+        for (const mode of cameraModes) {
+          try {
+            console.log('尝试启动扫码器，模式:', mode)
+            await this.html5QrCode.start(
+              mode,
+              {
+                fps: 10,
+                qrbox: { width: 250, height: 150 },
+                aspectRatio: 1.777778
+              },
+              (decodedText) => {
+                this.scannedBarcode = decodedText
+                this.stopScanner()
+                this.processUsage()
+              },
+              (errorMessage) => {
+                console.log('扫码中...')
+              }
+            )
+            scannerStarted = true
+            break
+          } catch (scannerError) {
+            console.log('扫码器启动失败，尝试下一个模式:', scannerError)
+            // 清理之前的尝试
+            if (this.html5QrCode) {
+              try {
+                await this.html5QrCode.stop()
+              } catch (e) {}
+              this.html5QrCode = new Html5Qrcode('scanner-region')
+            }
           }
-        )
+        }
+        
+        if (!scannerStarted) {
+          throw new Error('所有摄像头模式都失败')
+        }
+        
       } catch (err) {
         console.error('无法启动摄像头:', err)
-        alert('无法访问摄像头，请确保已授予摄像头权限')
+        let errorMessage = '无法访问摄像头'
+        
+        if (err.name === 'NotAllowedError') {
+          errorMessage = '摄像头权限被拒绝，请在浏览器设置中允许使用摄像头'
+        } else if (err.name === 'NotFoundError') {
+          errorMessage = '未找到摄像头设备'
+        } else if (err.name === 'OverconstrainedError') {
+          errorMessage = '摄像头约束不满足，尝试使用其他摄像头'
+        } else if (err.message.includes('browser does not support')) {
+          errorMessage = '浏览器不支持摄像头功能'
+        }
+        
+        alert(errorMessage + '\n\n错误详情: ' + (err.message || err))
         this.stopScanner()
       }
     },
@@ -183,7 +224,7 @@ export default {
       if (!this.scannedBarcode) {
         this.usageResult = {
           success: false,
-          message: '请输入条码'
+          message: '请输入编码'
         }
         return
       }

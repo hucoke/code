@@ -1,37 +1,21 @@
 <template>
   <div class="card">
-      <h2>条码可视化配置</h2>
+      <h2>二维码可视化配置</h2>
 
       <div class="config-section">
-        <h3>条码参数设置</h3>
+        <h3>二维码参数设置</h3>
         <div class="form-row">
           <div class="form-group">
-            <label for="barcodeWidth">条码宽度</label>
-            <input type="number" id="barcodeWidth" v-model="config.barcodeWidth" min="1" max="5" step="0.5">
-          </div>
-          <div class="form-group">
-            <label for="barcodeHeight">条码高度</label>
-            <input type="number" id="barcodeHeight" v-model="config.barcodeHeight" min="30" max="200">
-          </div>
-          <div class="form-group">
-            <label for="fontSize">字体大小</label>
-            <input type="number" id="fontSize" v-model="config.fontSize" min="8" max="24">
+            <label for="qrcodeSize">二维码大小</label>
+            <input type="number" id="qrcodeSize" v-model="config.qrcodeSize" min="100" max="300">
           </div>
           <div class="form-group">
             <label for="margin">边距</label>
             <input type="number" id="margin" v-model="config.margin" min="0" max="20">
           </div>
-        </div>
-        <div class="form-row">
           <div class="form-group">
-            <label for="textMargin">文字边距</label>
-            <input type="number" id="textMargin" v-model="config.textMargin" min="0" max="10">
-          </div>
-          <div class="form-group checkbox-group">
-            <label>
-              <input type="checkbox" v-model="config.displayValue" :true-value="'true'" :false-value="'false'">
-              显示条码值
-            </label>
+            <label for="fontSize">字体大小</label>
+            <input type="number" id="fontSize" v-model="config.fontSize" min="8" max="24">
           </div>
         </div>
       </div>
@@ -40,11 +24,11 @@
         <h3>自定义文本设置</h3>
         <div class="form-row">
           <div class="form-group">
-            <label for="customTextTop">条码上方文本</label>
+            <label for="customTextTop">编码上方文本</label>
             <input type="text" id="customTextTop" v-model="config.customTextTop" placeholder="例：产品名称">
           </div>
           <div class="form-group">
-            <label for="customTextBottom">条码下方文本</label>
+            <label for="customTextBottom">编码下方文本</label>
             <input type="text" id="customTextBottom" v-model="config.customTextBottom" placeholder="例：生产日期">
           </div>
         </div>
@@ -107,19 +91,15 @@
 </template>
 
 <script>
-import JsBarcode from 'jsbarcode'
+import QRCode from 'qrcode'
 
 export default {
   data() {
     return {
       config: {
-        barcodeWidth: '2',
-        barcodeHeight: '80',
+        qrcodeSize: '200',
+        margin: '1',
         fontSize: '14',
-        margin: '10',
-        displayValue: 'true',
-        showText: 'true',
-        textMargin: '2',
         customTextTop: '',
         customTextBottom: '',
         showCustomTextTop: 'false',
@@ -145,12 +125,9 @@ export default {
     this.loadConfig()
   },
   watch: {
-    'config.barcodeWidth': 'updatePreview',
-    'config.barcodeHeight': 'updatePreview',
-    'config.fontSize': 'updatePreview',
+    'config.qrcodeSize': 'updatePreview',
     'config.margin': 'updatePreview',
-    'config.displayValue': 'updatePreview',
-    'config.textMargin': 'updatePreview',
+    'config.fontSize': 'updatePreview',
     'config.customTextTop': 'updatePreview',
     'config.customTextBottom': 'updatePreview',
     'config.showCustomTextTop': 'updatePreview',
@@ -169,27 +146,25 @@ export default {
         console.error('加载配置失败:', error)
       }
     },
-    updatePreview() {
+    async updatePreview() {
       if (!this.$refs.previewBarcode) return
 
-      const barcodeWidth = parseFloat(this.config.barcodeWidth)
-      const barcodeHeight = parseInt(this.config.barcodeHeight)
-      const fontSize = parseInt(this.config.fontSize)
+      const qrcodeSize = parseInt(this.config.qrcodeSize)
       const margin = parseInt(this.config.margin)
-      const displayValue = this.config.displayValue === 'true'
 
       try {
-        JsBarcode(this.$refs.previewBarcode, this.previewCode, {
-          format: 'CODE128',
-          width: barcodeWidth,
-          height: barcodeHeight,
-          displayValue: displayValue,
-          fontSize: fontSize,
-          margin: margin,
-          textMargin: parseInt(this.config.textMargin)
+        // 清空之前的内容
+        this.$refs.previewBarcode.innerHTML = ''
+        // 创建canvas元素
+        const canvas = document.createElement('canvas')
+        this.$refs.previewBarcode.appendChild(canvas)
+        // 生成二维码
+        await QRCode.toCanvas(canvas, this.previewCode, {
+          width: qrcodeSize,
+          margin: margin
         })
       } catch (error) {
-        console.error('条码生成失败:', error)
+        console.error('二维码生成失败:', error)
       }
     },
     async saveConfig() {
@@ -214,13 +189,9 @@ export default {
     },
     resetConfig() {
       this.config = {
-        barcodeWidth: '2',
-        barcodeHeight: '80',
+        qrcodeSize: '200',
+        margin: '1',
         fontSize: '14',
-        margin: '10',
-        displayValue: 'true',
-        showText: 'true',
-        textMargin: '2',
         customTextTop: '',
         customTextBottom: '',
         showCustomTextTop: 'false',
@@ -233,32 +204,27 @@ export default {
         this.updatePreview()
       })
     },
-    printPreview() {
+    async printPreview() {
       const printWindow = window.open('', '_blank')
-      const barcodeWidth = parseFloat(this.config.barcodeWidth)
-      const barcodeHeight = parseInt(this.config.barcodeHeight)
-      const fontSize = parseInt(this.config.fontSize)
+      const qrcodeSize = parseInt(this.config.qrcodeSize)
       const margin = parseInt(this.config.margin)
-      const displayValue = this.config.displayValue === 'true'
+      const fontSize = parseInt(this.config.fontSize)
 
-      let svgHtml = ''
-      const tempSvg = document.createElement('svg')
-      JsBarcode(tempSvg, this.previewCode, {
-        format: 'CODE128',
-        width: barcodeWidth,
-        height: barcodeHeight,
-        displayValue: displayValue,
-        fontSize: fontSize,
-        margin: margin,
-        textMargin: parseInt(this.config.textMargin)
+      // 创建canvas元素生成二维码
+      const canvas = document.createElement('canvas')
+      await QRCode.toCanvas(canvas, this.previewCode, {
+        width: qrcodeSize,
+        margin: margin
       })
-      svgHtml = tempSvg.outerHTML
+      
+      // 将canvas转换为data URL
+      const qrCodeDataUrl = canvas.toDataURL('image/png')
 
       printWindow.document.write(`
         <!DOCTYPE html>
         <html>
           <head>
-            <title>条码打印预览</title>
+            <title>二维码打印预览</title>
             <style>
               body {
                 margin: 0;
@@ -276,7 +242,7 @@ export default {
                 border: 1px dashed #ccc;
                 text-align: center;
               }
-              .print-box svg {
+              .print-box img {
                 max-width: 100%;
                 height: auto;
               }
@@ -300,7 +266,7 @@ export default {
           <body>
             <div class="print-box">
               ${this.config.showCustomTextTop === 'true' && this.config.customTextTop ? `<div class="print-custom-text print-text-top">${this.config.customTextTop}</div>` : ''}
-              ${svgHtml}
+              <img src="${qrCodeDataUrl}" alt="二维码">
               <div class="print-text">${this.previewCode}</div>
               ${this.config.showCustomTextBottom === 'true' && this.config.customTextBottom ? `<div class="print-custom-text print-text-bottom">${this.config.customTextBottom}</div>` : ''}
             </div>

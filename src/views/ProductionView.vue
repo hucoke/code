@@ -21,10 +21,10 @@
               <router-link to="/usage" class="nav-link">使用</router-link>
             </li>
             <li class="nav-item">
-              <router-link to="/dashboard/barcode-maintenance" class="nav-link">条码维护</router-link>
+              <router-link to="/dashboard/barcode-maintenance" class="nav-link">编码维护</router-link>
             </li>
             <li class="nav-item">
-              <router-link to="/dashboard/barcode-config" class="nav-link">条码配置</router-link>
+              <router-link to="/dashboard/barcode-config" class="nav-link">编码配置</router-link>
             </li>
             <li class="nav-item">
               <router-link to="/dashboard/status-view" class="nav-link">状态查看</router-link>
@@ -40,7 +40,7 @@
       </div>
     </div>
     <div class="card">
-      <h2>生产管理 - 生成条码</h2>
+      <h2>生产管理 - 生成编码</h2>
       <div class="form-row">
         <div class="form-group">
           <label for="model">产品型号</label>
@@ -68,7 +68,7 @@
         </div>
       </div>
       <div class="button-group">
-        <button class="btn btn-primary" @click="generateBarcodes" :disabled="loading">生成条码</button>
+        <button class="btn btn-primary" @click="generateBarcodes" :disabled="loading">生成编码</button>
         <button v-if="!viewingBatchDetail" class="btn btn-secondary" @click="printAllBarcodes" :disabled="generatedBarcodes.length === 0 || loading">批量打印全部</button>
         <button v-if="viewingBatchDetail" class="btn btn-secondary" @click="printAllBarcodes" :disabled="currentViewingBatch === null || loading">重新打印本批次</button>
       </div>
@@ -88,7 +88,7 @@
             <thead>
               <tr>
                 <th>序号</th>
-                <th>条码</th>
+                <th>编码</th>
                 <th>产品型号</th>
                 <th>生产日期</th>
                 <th>操作</th>
@@ -110,13 +110,13 @@
       </div>
 
       <div v-if="!viewingBatchDetail && generatedBarcodes.length > 0" class="card" style="margin-top: 20px;">
-        <h3>已生成 {{ generatedBarcodes.length }} 张条码</h3>
+        <h3>已生成 {{ generatedBarcodes.length }} 张编码</h3>
         <div class="table-container">
           <table>
             <thead>
               <tr>
                 <th>序号</th>
-                <th>条码</th>
+                <th>编码</th>
                 <th>产品型号</th>
                 <th>生产日期</th>
                 <th>操作</th>
@@ -170,7 +170,7 @@
     <div ref="printAreaRef" style="display: none;">
       <div id="printContent" style="text-align: center; padding: 20px; font-family: Arial, sans-serif;">
         <div id="printBarcode" style="font-size: 24px; font-weight: bold; margin-bottom: 20px;"></div>
-        <svg id="printBarcodeSvg" style="margin: 20px auto;"></svg>
+        <canvas id="printBarcodeCanvas" style="margin: 20px auto;"></canvas>
         <div style="margin-top: 20px; font-size: 16px;">
           <p id="printModel"></p>
           <p id="printQuantity"></p>
@@ -186,6 +186,7 @@
 
 <script>
 import JsBarcode from 'jsbarcode'
+import QRCode from 'qrcode'
 
 export default {
   data() {
@@ -286,15 +287,14 @@ export default {
         this.viewingBatchDetail = false
         this.currentViewingBatch = null
       } catch (error) {
-        console.error('生成条码失败:', error)
-        alert(error.message || '生成条码失败')
+        console.error('生成编码失败:', error)
+        alert(error.message || '生成编码失败')
       } finally {
         this.loading = false
       }
     },
-    printSingleBarcode(barcode) {
+    async printSingleBarcode(barcode) {
       const cfg = this.barcodeConfig
-      const displayValue = cfg.displayValue === 'true'
 
       document.getElementById('printBarcode').textContent = barcode.code
       document.getElementById('printModel').textContent = `产品型号：${barcode.model}`
@@ -302,14 +302,11 @@ export default {
       document.getElementById('printDate').textContent = `生产日期：${barcode.production_date || barcode.productionDate}`
       document.getElementById('printTime').textContent = new Date().toLocaleString('zh-CN')
 
-      const printSvg = document.getElementById('printBarcodeSvg')
-      JsBarcode(printSvg, barcode.code, {
-        format: 'CODE128',
-        width: parseFloat(cfg.barcodeWidth),
-        height: parseInt(cfg.barcodeHeight),
-        displayValue: displayValue,
-        fontSize: parseInt(cfg.fontSize),
-        margin: parseInt(cfg.margin)
+      const printCanvas = document.getElementById('printBarcodeCanvas')
+      // 生成二维码
+      await QRCode.toCanvas(printCanvas, barcode.code, {
+        width: 200,
+        margin: 1
       })
 
       const printContent = document.getElementById('printContent').innerHTML
@@ -317,7 +314,7 @@ export default {
       printWindow.document.write(`
         <html>
           <head>
-            <title>打印条码</title>
+            <title>打印二维码</title>
             <style>
               body { margin: 0; padding: 0; }
               @media print { @page { size: auto; } }
@@ -357,11 +354,11 @@ export default {
       let printHtml = ''
 
       barcodesToPrint.forEach((barcode, index) => {
-        const svgId = `barcode_${index}`
+        const canvasId = `barcode_${index}`
         printHtml += `
           <div style="page-break-after: always; text-align: center; padding: 20px;">
             <div style="font-size: 20px; font-weight: bold; margin-bottom: 15px;">${barcode.code}</div>
-            <svg id="${svgId}" style="margin: 10px auto;"></svg>
+            <canvas id="${canvasId}" style="margin: 10px auto;"></canvas>
             <div style="margin-top: 10px; font-size: 12px;">
               <p style="margin: 2px 0;">型号：${barcode.model}</p>
               <p style="margin: 2px 0;">日期：${barcode.production_date || barcode.productionDate}</p>
@@ -373,7 +370,7 @@ export default {
       printWindow.document.write(`
         <html>
           <head>
-            <title>批量打印条码</title>
+            <title>批量打印编码</title>
             <style>
               body { margin: 0; padding: 0; font-family: Arial, sans-serif; }
               @media print { @page { size: auto; margin: 10mm; } }
@@ -385,20 +382,15 @@ export default {
 
       printWindow.document.close()
 
-      setTimeout(() => {
-        const cfg = this.barcodeConfig
-        const displayValue = cfg.displayValue === 'true'
-        barcodesToPrint.forEach((barcode, index) => {
-          const svgId = `barcode_${index}`
-          const svgElement = printWindow.document.getElementById(svgId)
-          if (svgElement) {
-            JsBarcode(svgElement, barcode.code, {
-              format: 'CODE128',
-              width: parseFloat(cfg.barcodeWidth),
-              height: parseInt(cfg.barcodeHeight),
-              displayValue: displayValue,
-              fontSize: parseInt(cfg.fontSize),
-              margin: parseInt(cfg.margin)
+      setTimeout(async () => {
+        barcodesToPrint.forEach(async (barcode, index) => {
+          const canvasId = `barcode_${index}`
+          const canvasElement = printWindow.document.getElementById(canvasId)
+          if (canvasElement) {
+            // 生成二维码
+            await QRCode.toCanvas(canvasElement, barcode.code, {
+              width: 150,
+              margin: 1
             })
           }
         })
@@ -420,11 +412,11 @@ export default {
         let printHtml = ''
 
         barcodes.forEach((barcode, index) => {
-          const svgId = `barcode_${index}`
+          const canvasId = `barcode_${index}`
           printHtml += `
             <div style="page-break-after: always; text-align: center; padding: 20px;">
               <div style="font-size: 20px; font-weight: bold; margin-bottom: 15px;">${barcode.code}</div>
-              <svg id="${svgId}" style="margin: 10px auto;"></svg>
+              <canvas id="${canvasId}" style="margin: 10px auto;"></canvas>
               <div style="margin-top: 10px; font-size: 12px;">
                 <p style="margin: 2px 0;">型号：${barcode.model}</p>
                 <p style="margin: 2px 0;">日期：${barcode.production_date}</p>
@@ -436,7 +428,7 @@ export default {
         printWindow.document.write(`
           <html>
             <head>
-              <title>批次打印条码 - ${batch.batch_code}</title>
+              <title>批次打印编码 - ${batch.batch_code}</title>
               <style>
                 body { margin: 0; padding: 0; font-family: Arial, sans-serif; }
                 @media print { @page { size: auto; margin: 10mm; } }
@@ -448,20 +440,15 @@ export default {
 
         printWindow.document.close()
 
-        setTimeout(() => {
-          const cfg = this.barcodeConfig
-          const displayValue = cfg.displayValue === 'true'
-          barcodes.forEach((barcode, index) => {
-            const svgId = `barcode_${index}`
-            const svgElement = printWindow.document.getElementById(svgId)
-            if (svgElement) {
-              JsBarcode(svgElement, barcode.code, {
-                format: 'CODE128',
-                width: parseFloat(cfg.barcodeWidth),
-                height: parseInt(cfg.barcodeHeight),
-                displayValue: displayValue,
-                fontSize: parseInt(cfg.fontSize),
-                margin: parseInt(cfg.margin)
+        setTimeout(async () => {
+          barcodes.forEach(async (barcode, index) => {
+            const canvasId = `barcode_${index}`
+            const canvasElement = printWindow.document.getElementById(canvasId)
+            if (canvasElement) {
+              // 生成二维码
+              await QRCode.toCanvas(canvasElement, barcode.code, {
+                width: 150,
+                margin: 1
               })
             }
           })

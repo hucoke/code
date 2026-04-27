@@ -57,7 +57,7 @@
     </div>
 
     <div class="card" style="margin-top: 20px;">
-      <h2>条码字段维护</h2>
+      <h2>编码字段维护</h2>
       <div class="form-group">
         <label for="fieldName">字段名称</label>
         <input type="text" id="fieldName" v-model="newField.name" placeholder="请输入字段名称">
