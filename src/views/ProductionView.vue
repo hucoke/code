@@ -296,37 +296,61 @@ export default {
     async printSingleBarcode(barcode) {
       const cfg = this.barcodeConfig
 
-      document.getElementById('printBarcode').textContent = barcode.code
-      document.getElementById('printModel').textContent = `产品型号：${barcode.model}`
-      document.getElementById('printQuantity').textContent = `序号：${barcode.sequence}`
-      document.getElementById('printDate').textContent = `生产日期：${barcode.production_date || barcode.productionDate}`
-      document.getElementById('printTime').textContent = new Date().toLocaleString('zh-CN')
-
-      const printCanvas = document.getElementById('printBarcodeCanvas')
-      // 生成二维码
-      await QRCode.toCanvas(printCanvas, barcode.code, {
-        width: 200,
-        margin: 1
-      })
-
-      const printContent = document.getElementById('printContent').innerHTML
       const printWindow = window.open('', '_blank')
+      
       printWindow.document.write(`
         <html>
           <head>
             <title>打印二维码</title>
             <style>
-              body { margin: 0; padding: 0; }
+              body { margin: 0; padding: 0; font-family: Arial, sans-serif; }
               @media print { @page { size: auto; } }
+              .print-content {
+                text-align: center; padding: 20px;
+              }
+              .print-barcode {
+                font-size: 24px; font-weight: bold; margin-bottom: 20px;
+              }
+              .print-info {
+                margin-top: 20px; font-size: 16px;
+              }
+              .print-time {
+                margin-top: 30px; font-size: 12px; color: #999;
+              }
             </style>
           </head>
-          <body>${printContent}</body>
+          <body>
+            <div class="print-content">
+              <div class="print-barcode">${barcode.code}</div>
+              <canvas id="printBarcodeCanvas" style="margin: 20px auto;"></canvas>
+              <div class="print-info">
+                <p>产品型号：${barcode.model}</p>
+                <p>序号：${barcode.sequence}</p>
+                <p>生产日期：${barcode.production_date || barcode.productionDate}</p>
+              </div>
+              <div class="print-time">
+                <p>生成时间：${new Date().toLocaleString('zh-CN')}</p>
+              </div>
+            </div>
+          </body>
         </html>
       `)
+      
       printWindow.document.close()
-      printWindow.focus()
-      printWindow.print()
-      printWindow.close()
+      
+      // 等待窗口加载完成后生成二维码
+      setTimeout(async () => {
+        const printCanvas = printWindow.document.getElementById('printBarcodeCanvas')
+        // 生成二维码
+        await QRCode.toCanvas(printCanvas, barcode.code, {
+          width: 200,
+          margin: 1
+        })
+        
+        printWindow.focus()
+        printWindow.print()
+        printWindow.close()
+      }, 100)
     },
     async printAllBarcodes() {
       const barcodesToPrint = this.viewingBatchDetail && this.currentViewingBatch
