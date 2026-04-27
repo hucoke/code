@@ -133,6 +133,7 @@ function initialize() {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         category TEXT NOT NULL,
         value TEXT NOT NULL,
+        abbreviation TEXT DEFAULT '',
         display_order INTEGER DEFAULT 0,
         created_at TEXT NOT NULL,
         UNIQUE(category, value)
@@ -615,11 +616,11 @@ function getDropdownOptionsByCategory(category, callback) {
   });
 }
 
-function saveDropdownOption(category, value, displayOrder, callback) {
+function saveDropdownOption(category, value, displayOrder, abbreviation, callback) {
   const now = new Date().toISOString();
   db.run(
-    'INSERT OR IGNORE INTO dropdown_options (category, value, display_order, created_at) VALUES (?, ?, ?, ?)',
-    [category, value, displayOrder || 0, now],
+    'INSERT OR IGNORE INTO dropdown_options (category, value, abbreviation, display_order, created_at) VALUES (?, ?, ?, ?, ?)',
+    [category, value, abbreviation || '', displayOrder || 0, now],
     function(err) {
       if (err) {
         console.error('Error saving dropdown option:', err.message);
@@ -642,10 +643,10 @@ function deleteDropdownOption(id, callback) {
   });
 }
 
-function updateDropdownOption(id, value, displayOrder, callback) {
+function updateDropdownOption(id, value, displayOrder, abbreviation, callback) {
   db.run(
-    'UPDATE dropdown_options SET value = ?, display_order = ? WHERE id = ?',
-    [value, displayOrder || 0, id],
+    'UPDATE dropdown_options SET value = ?, abbreviation = ?, display_order = ? WHERE id = ?',
+    [value, abbreviation || '', displayOrder || 0, id],
     function(err) {
       if (err) {
         console.error('Error updating dropdown option:', err.message);

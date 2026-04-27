@@ -312,13 +312,13 @@ router.get('/dropdown-options', (req, res) => {
 });
 
 router.post('/dropdown-options', (req, res) => {
-  const { category, value, displayOrder } = req.body;
+  const { category, value, displayOrder, abbreviation } = req.body;
 
   if (!category || !value) {
     return res.status(400).json({ error: '缺少必要参数' });
   }
 
-  db.saveDropdownOption(category, value, displayOrder || 0, (err) => {
+  db.saveDropdownOption(category, value, displayOrder || 0, abbreviation || '', (err) => {
     if (err) {
       return res.status(500).json({ error: '保存选项失败' });
     }
@@ -328,13 +328,13 @@ router.post('/dropdown-options', (req, res) => {
 });
 
 router.put('/dropdown-options/:id', (req, res) => {
-  const { value, displayOrder } = req.body;
+  const { value, displayOrder, abbreviation } = req.body;
 
   if (!value) {
     return res.status(400).json({ error: '缺少选项值' });
   }
 
-  db.updateDropdownOption(req.params.id, value, displayOrder || 0, (err) => {
+  db.updateDropdownOption(req.params.id, value, displayOrder || 0, abbreviation || '', (err) => {
     if (err) {
       return res.status(500).json({ error: '更新选项失败' });
     }
