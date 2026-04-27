@@ -136,6 +136,20 @@ export default {
     },
     async startScanner() {
       try {
+        // 检查是否使用HTTPS
+        if (window.location.protocol !== 'https:') {
+          alert('摄像头功能需要在HTTPS安全连接下使用，请使用HTTPS访问本网站')
+          this.stopScanner()
+          return
+        }
+        
+        // 检查浏览器是否支持摄像头
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          alert('您的浏览器不支持摄像头功能，请使用现代浏览器如Chrome、Firefox或Edge')
+          this.stopScanner()
+          return
+        }
+        
         this.showScannerModal = true
         this.scannerActive = true
         
@@ -194,13 +208,13 @@ export default {
         let errorMessage = '无法访问摄像头'
         
         if (err.name === 'NotAllowedError') {
-          errorMessage = '摄像头权限被拒绝，请在浏览器设置中允许使用摄像头'
+          errorMessage = '摄像头权限被拒绝，请在浏览器设置中允许使用摄像头。\n\n操作步骤：\n1. 点击浏览器地址栏左侧的锁图标\n2. 在权限设置中允许摄像头访问\n3. 刷新页面后重试'
         } else if (err.name === 'NotFoundError') {
-          errorMessage = '未找到摄像头设备'
+          errorMessage = '未找到摄像头设备，请确保您的设备有摄像头并已正确连接'
         } else if (err.name === 'OverconstrainedError') {
           errorMessage = '摄像头约束不满足，尝试使用其他摄像头'
         } else if (err.message.includes('browser does not support')) {
-          errorMessage = '浏览器不支持摄像头功能'
+          errorMessage = '浏览器不支持摄像头功能，请使用现代浏览器如Chrome、Firefox或Edge'
         }
         
         alert(errorMessage + '\n\n错误详情: ' + (err.message || err))
