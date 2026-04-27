@@ -60,14 +60,14 @@
       <div class="form-row">
         <div class="form-group">
           <label for="model">产品型号</label>
-          <select id="model" v-model="product.model" :disabled="!product.productionLine">
+          <select id="model" v-model="product.model" :disabled="!product.productionLine" @change="onModelChange">
             <option value="">请选择产品型号</option>
             <option v-for="option in filteredModels" :key="option.id" :value="option.value">{{ option.abbreviation ? option.abbreviation + '：' + option.value : option.value }}</option>
           </select>
         </div>
         <div class="form-group">
           <label for="rawMaterial">原料名称</label>
-          <select id="rawMaterial" v-model="product.rawMaterial">
+          <select id="rawMaterial" v-model="product.rawMaterial" @change="onRawMaterialChange">
             <option value="">请选择原料名称</option>
             <option v-for="option in rawMaterialOptions" :key="option.id" :value="option.value">{{ option.abbreviation ? option.abbreviation + '：' + option.value : option.value }}</option>
           </select>
@@ -76,11 +76,11 @@
       <div class="form-row">
         <div class="form-group date-input-group">
           <label for="productionDate">生产日期</label>
-          <input type="date" id="productionDate" v-model="product.productionDate" required>
+          <input type="date" id="productionDate" v-model="product.productionDate" required @change="onProductionDateChange">
         </div>
         <div class="form-group">
           <label for="quantity">生产数量</label>
-          <input type="number" id="quantity" v-model="product.quantity" placeholder="请输入生产数量" min="1" required>
+          <input type="number" id="quantity" v-model="product.quantity" placeholder="请输入生产数量" min="1" required @change="onQuantityChange">
         </div>
       </div>
       <div class="button-group">
@@ -342,6 +342,21 @@ export default {
         this.productionBatches = data.productionBatches
         this.printedBatches = new Set(data.printedBatches)
         this.barcodeConfig = { ...this.barcodeConfig, ...configData }
+        
+        // 从localStorage读取上次选择的值
+        const lastSupplier = localStorage.getItem('lastSupplier')
+        const lastProductionLine = localStorage.getItem('lastProductionLine')
+        const lastModel = localStorage.getItem('lastModel')
+        const lastRawMaterial = localStorage.getItem('lastRawMaterial')
+        const lastProductionDate = localStorage.getItem('lastProductionDate')
+        const lastQuantity = localStorage.getItem('lastQuantity')
+        
+        if (lastSupplier) this.product.supplier = lastSupplier
+        if (lastProductionLine) this.product.productionLine = lastProductionLine
+        if (lastModel) this.product.model = lastModel
+        if (lastRawMaterial) this.product.rawMaterial = lastRawMaterial
+        if (lastProductionDate) this.product.productionDate = lastProductionDate
+        if (lastQuantity) this.product.quantity = lastQuantity
       } catch (error) {
         console.error('加载数据失败:', error)
         // 如果服务器加载失败，尝试使用本地存储的数据
@@ -356,6 +371,22 @@ export default {
           this.supplierOptions = JSON.parse(localSupplierOptions)
           this.rawMaterialOptions = JSON.parse(localRawMaterialOptions)
           console.log('服务器加载失败，使用本地存储数据')
+          
+          // 从localStorage读取上次选择的值
+          const lastSupplier = localStorage.getItem('lastSupplier')
+          const lastProductionLine = localStorage.getItem('lastProductionLine')
+          const lastModel = localStorage.getItem('lastModel')
+          const lastRawMaterial = localStorage.getItem('lastRawMaterial')
+          const lastProductionDate = localStorage.getItem('lastProductionDate')
+          const lastQuantity = localStorage.getItem('lastQuantity')
+          
+          if (lastSupplier) this.product.supplier = lastSupplier
+          if (lastProductionLine) this.product.productionLine = lastProductionLine
+          if (lastModel) this.product.model = lastModel
+          if (lastRawMaterial) this.product.rawMaterial = lastRawMaterial
+          if (lastProductionDate) this.product.productionDate = lastProductionDate
+          if (lastQuantity) this.product.quantity = lastQuantity
+          
           alert('服务器加载失败，使用本地存储数据')
         } else {
           alert('加载数据失败，请检查服务器是否运行')
@@ -367,9 +398,35 @@ export default {
     onSupplierChange() {
       this.product.productionLine = ''
       this.product.model = ''
+      if (this.product.supplier) {
+        localStorage.setItem('lastSupplier', this.product.supplier)
+      }
     },
     onProductionLineChange() {
       this.product.model = ''
+      if (this.product.productionLine) {
+        localStorage.setItem('lastProductionLine', this.product.productionLine)
+      }
+    },
+    onModelChange() {
+      if (this.product.model) {
+        localStorage.setItem('lastModel', this.product.model)
+      }
+    },
+    onRawMaterialChange() {
+      if (this.product.rawMaterial) {
+        localStorage.setItem('lastRawMaterial', this.product.rawMaterial)
+      }
+    },
+    onProductionDateChange() {
+      if (this.product.productionDate) {
+        localStorage.setItem('lastProductionDate', this.product.productionDate)
+      }
+    },
+    onQuantityChange() {
+      if (this.product.quantity) {
+        localStorage.setItem('lastQuantity', this.product.quantity)
+      }
     },
     handleLogout() {
       localStorage.removeItem('loggedIn')

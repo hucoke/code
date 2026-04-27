@@ -366,6 +366,7 @@ export default {
                     body: JSON.stringify({
                       category: option.category,
                       value: option.value,
+                      abbreviation: option.abbreviation || '',
                       displayOrder: option.display_order || option.displayOrder || 0
                     })
                   })
