@@ -102,6 +102,7 @@
                 <td>{{ barcode.production_date }}</td>
                 <td>
                   <button class="btn btn-secondary" @click="printSingleBarcode(barcode)">打印</button>
+                  <button class="btn btn-secondary" @click="previewSingleBarcode(barcode)">查看</button>
                 </td>
               </tr>
             </tbody>
@@ -130,6 +131,7 @@
                 <td>{{ barcode.productionDate }}</td>
                 <td>
                   <button class="btn btn-secondary" @click="printSingleBarcode(barcode)">打印</button>
+                  <button class="btn btn-secondary" @click="previewSingleBarcode(barcode)">查看</button>
                 </td>
               </tr>
             </tbody>
@@ -181,6 +183,32 @@
         </div>
       </div>
     </div>
+
+    <!-- 预览模态框 -->
+    <div v-if="showPreviewModal" class="modal-overlay">
+      <div class="modal preview-modal">
+        <div class="modal-header">
+          <h3>编码预览</h3>
+          <button class="close-btn" @click="closePreviewModal">&times;</button>
+        </div>
+        <div class="preview-content" style="text-align: center; padding: 20px;">
+          <div style="font-size: 24px; font-weight: bold; margin-bottom: 20px;">{{ previewBarcode.code }}</div>
+          <canvas ref="previewCanvas" style="margin: 20px auto;"></canvas>
+          <div style="margin-top: 20px; font-size: 16px;">
+            <p>产品型号：{{ previewBarcode.model }}</p>
+            <p>序号：{{ previewBarcode.sequence }}</p>
+            <p>生产日期：{{ previewBarcode.production_date || previewBarcode.productionDate }}</p>
+          </div>
+          <div style="margin-top: 30px; font-size: 12px; color: #999;">
+            <p>生成时间：{{ new Date().toLocaleString('zh-CN') }}</p>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" @click="closePreviewModal">关闭</button>
+          <button class="btn btn-primary" @click="printFromPreview">打印</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -215,7 +243,9 @@ export default {
         printPadding: '20'
       },
       modelOptions: [],
-      productionLineOptions: []
+      productionLineOptions: [],
+      showPreviewModal: false,
+      previewBarcode: {}
     }
   },
   mounted() {
@@ -508,6 +538,32 @@ export default {
       this.viewingBatchDetail = false
       this.currentViewingBatch = null
     },
+    async previewSingleBarcode(barcode) {
+      this.previewBarcode = barcode
+      this.showPreviewModal = true
+      
+      // 等待DOM更新，确保预览Canvas已渲染
+      await this.$nextTick()
+      
+      const previewCanvas = this.$refs.previewCanvas
+      if (previewCanvas) {
+        // 生成二维码
+        await QRCode.toCanvas(previewCanvas, barcode.code, {
+          width: 200,
+          margin: 1
+        })
+      }
+    },
+    closePreviewModal() {
+      this.showPreviewModal = false
+      this.previewBarcode = {}
+    },
+    printFromPreview() {
+      if (this.previewBarcode) {
+        this.printSingleBarcode(this.previewBarcode)
+      }
+      this.closePreviewModal()
+    },
     isBatchPrinted(batchCode) {
       return this.printedBatches.has(batchCode)
     },
@@ -523,3 +579,84 @@ export default {
   }
 }
 </script>
+
+<style scoped>
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.preview-modal {
+  background-color: white;
+  border-radius: 8px;
+  width: 400px;
+  max-width: 90%;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px;
+  border-bottom: 1px solid #ddd;
+}
+
+.modal-header h3 {
+  margin: 0;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #666;
+}
+
+.close-btn:hover {
+  color: #333;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 15px;
+  border-top: 1px solid #ddd;
+}
+
+.btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.btn-primary {
+  background-color: #007bff;
+  color: white;
+}
+
+.btn-primary:hover {
+  background-color: #0069d9;
+}
+
+.btn-secondary {
+  background-color: #6c757d;
+  color: white;
+}
+
+.btn-secondary:hover {
+  background-color: #5a6268;
+}
+</style>
