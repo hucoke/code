@@ -47,6 +47,9 @@
           <input type="text" v-model="scannedBarcode" placeholder="或手动输入条码" @keyup.enter="processUsage">
         </div>
         <div class="button-group">
+          <button class="btn btn-primary" @click="startScanner" :disabled="scannerActive">
+            {{ scannerActive ? '扫码中...' : '摄像头扫码' }}
+          </button>
           <button class="btn btn-primary" @click="processUsage" :disabled="loading">确认使用</button>
         </div>
       </div>
@@ -83,21 +86,40 @@
         </table>
       </div>
     </div>
+
+    <div v-if="showScannerModal" class="modal-overlay">
+      <div class="modal scanner-modal">
+        <div class="modal-header">
+          <h3>摄像头扫码</h3>
+          <button class="close-btn" @click="stopScanner">&times;</button>
+        </div>
+        <div id="scanner-region" class="scanner-region"></div>
+        <p class="scanner-hint">将条码对准摄像头进行扫描</p>
+      </div>
+    </div>
   </div>
 </template>
 
 <script>
+import { Html5Qrcode } from 'html5-qrcode'
+
 export default {
   data() {
     return {
       scannedBarcode: '',
       usageResult: null,
       usageRecords: [],
-      loading: false
+      loading: false,
+      showScannerModal: false,
+      scannerActive: false,
+      html5QrCode: null
     }
   },
   mounted() {
     this.loadUsageRecords()
+  },
+  beforeUnmount() {
+    this.stopScanner()
   },
   methods: {
     async loadUsageRecords() {
@@ -111,6 +133,48 @@ export default {
     handleLogout() {
       localStorage.removeItem('loggedIn')
       this.$router.push('/')
+    },
+    async startScanner() {
+      this.showScannerModal = true
+      this.scannerActive = true
+      
+      try {
+        this.html5QrCode = new Html5Qrcode('scanner-region')
+        
+        await this.html5QrCode.start(
+          { facingMode: 'environment' },
+          {
+            fps: 10,
+            qrbox: { width: 250, height: 150 },
+            aspectRatio: 1.777778
+          },
+          (decodedText) => {
+            this.scannedBarcode = decodedText
+            this.stopScanner()
+            this.processUsage()
+          },
+          (errorMessage) => {
+            console.log('扫码中...')
+          }
+        )
+      } catch (err) {
+        console.error('无法启动摄像头:', err)
+        alert('无法访问摄像头，请确保已授予摄像头权限')
+        this.stopScanner()
+      }
+    },
+    async stopScanner() {
+      this.showScannerModal = false
+      this.scannerActive = false
+      
+      if (this.html5QrCode) {
+        try {
+          await this.html5QrCode.stop()
+          this.html5QrCode = null
+        } catch (err) {
+          console.error('停止扫码器失败:', err)
+        }
+      }
     },
     async processUsage() {
       if (!this.scannedBarcode) {
@@ -168,3 +232,62 @@ export default {
   }
 }
 </script>
+
+<style scoped>
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.scanner-modal {
+  background-color: white;
+  border-radius: 8px;
+  width: 350px;
+  max-width: 90%;
+  text-align: center;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px;
+  border-bottom: 1px solid #ddd;
+}
+
+.modal-header h3 {
+  margin: 0;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #666;
+}
+
+.close-btn:hover {
+  color: #333;
+}
+
+.scanner-region {
+  width: 100%;
+  min-height: 200px;
+  margin: 15px 0;
+}
+
+.scanner-hint {
+  padding: 10px;
+  color: #666;
+  font-size: 14px;
+}
+</style>
