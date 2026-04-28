@@ -10,18 +10,28 @@
           <div class="subsection">
             <label class="section-label">编码组成字段</label>
             <div class="encoding-fields">
-              <div v-for="(field, index) in config.encodingFields" :key="field" class="encoding-item">
+              <div v-for="(field, index) in config.encodingFields" :key="field.key" class="encoding-item">
                 <span class="encoding-index">{{ index + 1 }}</span>
-                <span class="encoding-field">{{ getFieldLabel(field) }}</span>
+                <span class="encoding-field">{{ getFieldLabel(field.key) }}</span>
+                <select v-model="field.format" class="encoding-format">
+                  <option value="abbreviation">缩写</option>
+                  <option value="value">值</option>
+                  <option value="both">缩写：值</option>
+                </select>
                 <button @click="removeEncodingField(index)" class="btn-remove">×</button>
               </div>
             </div>
             <div class="encoding-add">
-              <select v-model="newEncodingField" class="encoding-select">
+              <select v-model="newEncodingField.key" class="encoding-select">
                 <option value="">添加字段</option>
-                <option v-for="field in availableFields" :key="field.key" :value="field.key">
-                  {{ field.label }}
+                <option v-for="f in availableFields" :key="f.key" :value="f.key">
+                  {{ f.label }}
                 </option>
+              </select>
+              <select v-model="newEncodingField.format" class="encoding-format">
+                <option value="abbreviation">缩写</option>
+                <option value="value">值</option>
+                <option value="both">缩写：值</option>
               </select>
               <button @click="addEncodingField" class="btn-add">+</button>
             </div>
@@ -167,9 +177,14 @@ export default {
         fontWeight: 'normal',
         customTextTop: '',
         customTextBottom: '',
-        encodingFields: ['supplier', 'model', 'productionDate', 'sequence']
+        encodingFields: [
+          { key: 'supplier', format: 'abbreviation' },
+          { key: 'model', format: 'abbreviation' },
+          { key: 'productionDate', format: 'abbreviation' },
+          { key: 'sequence', format: 'value' }
+        ]
       },
-      newEncodingField: '',
+      newEncodingField: { key: '', format: 'abbreviation' },
       availableFields: [
         { key: 'supplier', label: '供应商', visible: true, position: 'left', format: 'abbreviation', sampleValue: '供应商A', sampleAbbreviation: 'SA' },
         { key: 'productionLine', label: '生产线', visible: true, position: 'left', format: 'abbreviation', sampleValue: 'LINE-A', sampleAbbreviation: 'LA' },
@@ -192,14 +207,15 @@ export default {
       }
     },
     encodingPreview() {
-      return this.config.encodingFields.map(fieldKey => {
-        const field = this.availableFields.find(f => f.key === fieldKey)
+      return this.config.encodingFields.map(fieldObj => {
+        const field = this.availableFields.find(f => f.key === fieldObj.key)
+        const format = fieldObj.format || 'abbreviation'
         if (field) {
-          if (field.format === 'abbreviation') return field.sampleAbbreviation
-          if (field.format === 'both') return `${field.sampleAbbreviation}:${field.sampleValue}`
+          if (format === 'abbreviation') return field.sampleAbbreviation
+          if (format === 'both') return `${field.sampleAbbreviation}:${field.sampleValue}`
           return field.sampleValue
         }
-        return fieldKey
+        return fieldObj.key
       }).join('')
     },
     leftFields() {
@@ -304,7 +320,12 @@ export default {
         fontWeight: 'normal',
         customTextTop: '',
         customTextBottom: '',
-        encodingFields: ['supplier', 'model', 'productionDate', 'sequence']
+        encodingFields: [
+          { key: 'supplier', format: 'abbreviation' },
+          { key: 'model', format: 'abbreviation' },
+          { key: 'productionDate', format: 'abbreviation' },
+          { key: 'sequence', format: 'value' }
+        ]
       }
       this.availableFields = [
         { key: 'supplier', label: '供应商', visible: true, position: 'left', format: 'abbreviation', sampleValue: '供应商A', sampleAbbreviation: 'SA' },
@@ -403,9 +424,9 @@ export default {
       return field ? field.label : key
     },
     addEncodingField() {
-      if (this.newEncodingField && !this.config.encodingFields.includes(this.newEncodingField)) {
-        this.config.encodingFields.push(this.newEncodingField)
-        this.newEncodingField = ''
+      if (this.newEncodingField.key && !this.config.encodingFields.find(f => f.key === this.newEncodingField.key)) {
+        this.config.encodingFields.push({ ...this.newEncodingField })
+        this.newEncodingField = { key: '', format: 'abbreviation' }
       }
     },
     removeEncodingField(index) {
@@ -534,6 +555,14 @@ export default {
   font-size: 11px;
   border: 1px solid #ddd;
   border-radius: 4px;
+}
+
+.encoding-format {
+  padding: 5px;
+  font-size: 11px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  min-width: 80px;
 }
 
 .btn-add {

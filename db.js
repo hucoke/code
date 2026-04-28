@@ -29,6 +29,9 @@ function initialize() {
         model_code TEXT NOT NULL,
         production_date TEXT NOT NULL,
         sequence INTEGER NOT NULL,
+        supplier TEXT DEFAULT '',
+        production_line TEXT DEFAULT '',
+        raw_material TEXT DEFAULT '',
         FOREIGN KEY (batch_code) REFERENCES production_batches(batch_code)
       )
     `);
@@ -267,11 +270,11 @@ function saveBatch(batch, barcodes, callback) {
     );
 
     const stmt = db.prepare(
-      'INSERT INTO barcodes (code, batch_code, model, model_code, production_date, sequence) VALUES (?, ?, ?, ?, ?, ?)'
+      'INSERT INTO barcodes (code, batch_code, model, model_code, production_date, sequence, supplier, production_line, raw_material) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
     );
 
     barcodes.forEach(barcode => {
-      stmt.run([barcode.code, barcode.batchCode, barcode.model, barcode.modelCode, barcode.productionDate, barcode.sequence], (err) => {
+      stmt.run([barcode.code, barcode.batchCode, barcode.model, barcode.modelCode, barcode.productionDate, barcode.sequence, barcode.supplier || '', barcode.productionLine || '', barcode.rawMaterial || ''], (err) => {
         if (err) {
           console.error('Error saving barcode:', err.message);
         }

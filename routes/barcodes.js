@@ -62,77 +62,171 @@ router.get('/batches/:batchCode/barcodes', (req, res) => {
 });
 
 router.post('/generate', (req, res) => {
-  const { model, quantity, productionDate } = req.body;
+  const { model, quantity, productionDate, supplier, productionLine, rawMaterial } = req.body;
 
   if (!model || !quantity || !productionDate) {
     return res.status(400).json({ error: '缺少必要参数' });
   }
 
-  let modelCode;
-  if (MODEL_CODES[model]) {
-    modelCode = MODEL_CODES[model];
-  } else {
-    modelCode = model.replace(/[^a-zA-Z0-9]/g, '');
-    if (modelCode.length > 10) {
-      modelCode = modelCode.substring(0, 10);
-    }
-  }
+  db.getBarcodeConfig((config) => {
+    db.getDropdownOptions((allOptions) => {
+      const optionsMap = {};
+      allOptions.forEach(opt => {
+        const key = `${opt.category}_${opt.value}`;
+        optionsMap[key] = opt;
+      });
 
-  if (!modelCode) {
-    return res.status(400).json({ error: '无效的产品型号' });
-  }
-
-  const dateStr = productionDate.replace(/-/g, '');
-  const trackerKey = `${modelCode}_${dateStr}`;
-  const batchKey = `${modelCode}_${dateStr}`;
-
-  db.getSequenceTracker((sequenceTracker) => {
-    db.getBatchSequenceTracker((batchSequenceTracker) => {
-      const lastSequence = sequenceTracker[trackerKey] || 0;
-      const lastBatchSequence = batchSequenceTracker[batchKey] || 0;
-      const newBatchSequence = lastBatchSequence + 1;
-
-      const batchCode = `B${dateStr}${modelCode}${newBatchSequence.toString().padStart(3, '0')}`;
-
-      const barcodes = [];
-      for (let i = 1; i <= quantity; i++) {
-        const currentSequence = lastSequence + i;
-        const sequenceNum = currentSequence.toString().padStart(4, '0');
-        barcodes.push({
-          code: `${modelCode}${dateStr}${sequenceNum}`,
-          batchCode: batchCode,
-          model: model,
-          modelCode: modelCode,
-          productionDate: productionDate,
-          sequence: currentSequence
-        });
+      let encodingFields = ['supplier', 'model', 'productionDate', 'sequence'];
+      if (config.encodingFields) {
+        try {
+          encodingFields = JSON.parse(config.encodingFields);
+        } catch (e) {
+          console.error('Error parsing encodingFields:', e);
+        }
       }
 
-      const newLastSequence = lastSequence + quantity;
-      sequenceTracker[trackerKey] = newLastSequence;
-      batchSequenceTracker[batchKey] = newBatchSequence;
+      const getFieldCode = (fieldKey, format) => {
+        let value = '';
+        let abbreviation = '';
 
-      const batch = {
-        batchCode: batchCode,
-        model: model,
-        modelCode: modelCode,
-        quantity: quantity,
-        productionDate: productionDate,
-        createdAt: new Date().toLocaleString('zh-CN')
+        switch(fieldKey) {
+          case 'supplier':
+            value = supplier || '';
+            const supplierOpt = optionsMap[`supplier_${supplier}`];
+            abbreviation = supplierOpt?.abbreviation || value.substring(0, 2);
+            break;
+          case 'productionLine':
+            value = productionLine || '';
+            const lineOpt = optionsMap[`production_line_${productionLine}`];
+            abbreviation = lineOpt?.abbreviation || value.replace('LINE-', '');
+            break;
+          case 'model':
+            value = model;
+            const modelOpt = optionsMap[`model_${model}`];
+            abbreviation = modelOpt?.abbreviation || (MODEL_CODES[model] || model.replace(/[^a-zA-Z0-9]/g, '').substring(0, 4));
+            break;
+          case 'rawMaterial':
+            value = rawMaterial || '';
+            const rawOpt = optionsMap[`raw_material_${rawMaterial}`];
+            abbreviation = rawOpt?.abbreviation || value.substring(0, 4);
+            break;
+          case 'productionDate':
+            value = productionDate.replace(/-/g, '');
+            abbreviation = productionDate.replace(/-/g, '').substring(2);
+            break;
+          case 'sequence':
+            value = '';
+            abbreviation = '';
+            break;
+          case 'batchCode':
+            value = '';
+            abbreviation = '';
+            break;
+          case 'currentTime':
+            const now = new Date();
+            value = `${now.getHours().toString().padStart(2, '0')}${now.getMinutes().toString().padStart(2, '0')}`;
+            abbreviation = value;
+            break;
+          default:
+            value = '';
+            abbreviation = '';
+        }
+
+        if (format === 'abbreviation') return abbreviation;
+        if (format === 'both') return `${abbreviation}:${value}`;
+        return value;
       };
 
-      db.updateSequenceTracker(trackerKey, newLastSequence, () => {
-        db.updateBatchSequenceTracker(batchKey, newBatchSequence, () => {
-          db.saveBatch(batch, barcodes, (err) => {
-            if (err) {
-              return res.status(500).json({ error: '保存失败' });
-            }
+      const dateStr = productionDate.replace(/-/g, '');
+      
+      let modelCode = '';
+      const modelOpt = optionsMap[`model_${model}`];
+      if (modelOpt?.abbreviation) {
+        modelCode = modelOpt.abbreviation;
+      } else if (MODEL_CODES[model]) {
+        modelCode = MODEL_CODES[model];
+      } else {
+        modelCode = model.replace(/[^a-zA-Z0-9]/g, '');
+        if (modelCode.length > 10) {
+          modelCode = modelCode.substring(0, 10);
+        }
+      }
 
-            res.json({
-              batch,
-              barcodes,
-              sequenceTracker,
-              batchSequenceTracker
+      const trackerKey = `${modelCode}_${dateStr}`;
+      const batchKey = `${modelCode}_${dateStr}`;
+
+      db.getSequenceTracker((sequenceTracker) => {
+        db.getBatchSequenceTracker((batchSequenceTracker) => {
+          const lastSequence = sequenceTracker[trackerKey] || 0;
+          const lastBatchSequence = batchSequenceTracker[batchKey] || 0;
+          const newBatchSequence = lastBatchSequence + 1;
+
+          const batchCode = `B${dateStr}${modelCode}${newBatchSequence.toString().padStart(3, '0')}`;
+
+          const barcodes = [];
+          for (let i = 1; i <= quantity; i++) {
+            const currentSequence = lastSequence + i;
+            
+            let codeParts = [];
+            encodingFields.forEach(fieldObj => {
+              const fieldKey = typeof fieldObj === 'object' ? fieldObj.key : fieldObj;
+              const format = typeof fieldObj === 'object' ? (fieldObj.format || 'abbreviation') : 'abbreviation';
+              
+              if (fieldKey === 'sequence') {
+                codeParts.push(currentSequence.toString().padStart(4, '0'));
+              } else if (fieldKey === 'batchCode') {
+                codeParts.push(batchCode);
+              } else {
+                const part = getFieldCode(fieldKey, format);
+                if (part) codeParts.push(part);
+              }
+            });
+            
+            const code = codeParts.join('');
+
+            barcodes.push({
+              code: code,
+              batchCode: batchCode,
+              model: model,
+              modelCode: modelCode,
+              productionDate: productionDate,
+              sequence: currentSequence,
+              supplier: supplier,
+              productionLine: productionLine,
+              rawMaterial: rawMaterial
+            });
+          }
+
+          const newLastSequence = lastSequence + quantity;
+          sequenceTracker[trackerKey] = newLastSequence;
+          batchSequenceTracker[batchKey] = newBatchSequence;
+
+          const batch = {
+            batchCode: batchCode,
+            model: model,
+            modelCode: modelCode,
+            quantity: quantity,
+            productionDate: productionDate,
+            supplier: supplier,
+            productionLine: productionLine,
+            rawMaterial: rawMaterial,
+            createdAt: new Date().toLocaleString('zh-CN')
+          };
+
+          db.updateSequenceTracker(trackerKey, newLastSequence, () => {
+            db.updateBatchSequenceTracker(batchKey, newBatchSequence, () => {
+              db.saveBatch(batch, barcodes, (err) => {
+                if (err) {
+                  return res.status(500).json({ error: '保存失败' });
+                }
+
+                res.json({
+                  batch,
+                  barcodes,
+                  sequenceTracker,
+                  batchSequenceTracker
+                });
+              });
             });
           });
         });

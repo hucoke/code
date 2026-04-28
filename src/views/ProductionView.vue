@@ -446,9 +446,11 @@ export default {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            model: this.product.model,
-            quantity: parseInt(this.product.quantity),
+            supplier: this.product.supplier,
             productionLine: this.product.productionLine,
+            model: this.product.model,
+            rawMaterial: this.product.rawMaterial,
+            quantity: parseInt(this.product.quantity),
             productionDate: this.product.productionDate
           })
         })
