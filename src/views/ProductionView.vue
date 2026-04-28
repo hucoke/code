@@ -44,7 +44,7 @@
       <div class="form-row">
         <div class="form-group">
           <label for="supplier">供应商</label>
-          <select id="supplier" v-model="product.supplier" @change="onSupplierChange">
+          <select id="supplier" v-model="product.supplier" @change="onSupplierChange" required>
             <option value="">请选择供应商</option>
             <option v-for="option in supplierOptions" :key="option.id" :value="option.value">{{ option.abbreviation ? option.abbreviation + '：' + option.value : option.value }}</option>
           </select>
@@ -87,8 +87,6 @@
         <button class="btn btn-primary" @click="generateBarcodes" :disabled="loading">生成编码</button>
         <button v-if="!viewingBatchDetail" class="btn btn-secondary" @click="printAllBarcodes" :disabled="generatedBarcodes.length === 0 || loading">批量打印全部</button>
         <button v-if="viewingBatchDetail" class="btn btn-secondary" @click="printAllBarcodes" :disabled="currentViewingBatch === null || loading">重新打印本批次</button>
-        <button class="btn btn-info" @click="syncData" :disabled="loading">同步数据</button>
-        <button class="btn btn-danger" @click="clearLocalData" :disabled="loading">清除本地数据</button>
       </div>
 
       <div v-if="loading" style="margin-top: 20px; color: #666;">处理中...</div>
@@ -204,22 +202,24 @@
 
     <!-- 预览模态框 -->
     <div v-if="showPreviewModal" class="modal-overlay">
-      <div class="modal preview-modal">
+      <div class="modal preview-modal" :style="previewModalStyle">
         <div class="modal-header">
           <h3>编码预览</h3>
           <button class="close-btn" @click="closePreviewModal">&times;</button>
         </div>
-        <div class="preview-content" style="text-align: center; padding: 20px;">
-          <div style="font-size: 24px; font-weight: bold; margin-bottom: 20px;">{{ previewBarcode.code }}</div>
-          <canvas ref="previewCanvas" style="margin: 20px auto;"></canvas>
-          <div style="margin-top: 20px; font-size: 16px;">
-            <p>产品型号：{{ previewBarcode.model }}</p>
-            <p>序号：{{ previewBarcode.sequence }}</p>
-            <p>生产日期：{{ previewBarcode.production_date || previewBarcode.productionDate }}</p>
+        <div class="preview-content" :style="previewContentStyle">
+          <div class="preview-main">
+            <div class="preview-left">
+              <div class="preview-left-item">供应商：{{ previewBarcode.supplier || '' }}</div>
+              <div class="preview-left-item">生产线：{{ previewBarcode.productionLine || '' }}</div>
+              <div class="preview-left-item">产品型号：{{ previewBarcode.model || '' }}</div>
+              <div class="preview-left-item">生产日期：{{ previewBarcode.productionDate || '' }}</div>
+            </div>
+            <div class="preview-qrcode">
+              <canvas ref="previewCanvas"></canvas>
+            </div>
           </div>
-          <div style="margin-top: 30px; font-size: 12px; color: #999;">
-            <p>生成时间：{{ new Date().toLocaleString('zh-CN') }}</p>
-          </div>
+          <div class="preview-code">{{ previewBarcode.code }}</div>
         </div>
         <div class="modal-footer">
           <button class="btn btn-secondary" @click="closePreviewModal">关闭</button>
@@ -231,7 +231,6 @@
 </template>
 
 <script>
-import JsBarcode from 'jsbarcode'
 import QRCode from 'qrcode'
 
 export default {
@@ -253,15 +252,32 @@ export default {
       printedBatches: new Set(),
       loading: false,
       barcodeConfig: {
-        barcodeWidth: '2',
-        barcodeHeight: '80',
-        fontSize: '14',
-        margin: '10',
-        displayValue: 'true',
-        printWidth: '300',
-        printHeight: '200',
-        printPadding: '20'
+        printWidth: '100',
+        printHeight: '60',
+        printPadding: '5',
+        qrcodeSize: '120',
+        showQrcode: true,
+        fontSize: '10',
+        fontWeight: 'normal',
+        customTextTop: '',
+        customTextBottom: '',
+        encodingFields: [
+          { key: 'supplier', format: 'abbreviation' },
+          { key: 'model', format: 'abbreviation' },
+          { key: 'productionDate', format: 'abbreviation' },
+          { key: 'sequence', format: 'value' }
+        ]
       },
+      availableFields: [
+        { key: 'supplier', label: '供应商', visible: true, position: 'left', format: 'abbreviation' },
+        { key: 'productionLine', label: '生产线', visible: true, position: 'left', format: 'abbreviation' },
+        { key: 'model', label: '产品型号', visible: true, position: 'top', format: 'abbreviation' },
+        { key: 'rawMaterial', label: '原料名称', visible: false, position: 'bottom', format: 'value' },
+        { key: 'productionDate', label: '生产日期', visible: true, position: 'bottom', format: 'value' },
+        { key: 'sequence', label: '序号', visible: true, position: 'bottom', format: 'value' },
+        { key: 'batchCode', label: '批次号', visible: false, position: 'bottom', format: 'value' },
+        { key: 'currentTime', label: '时间', visible: false, position: 'bottom', format: 'value' }
+      ],
       modelOptions: [],
       productionLineOptions: [],
       supplierOptions: [],
@@ -288,6 +304,35 @@ export default {
                opt.supplier === this.product.supplier ||
                !opt.productionLine && !opt.supplier
       })
+    },
+    previewConfig() {
+      return {
+        printWidth: parseInt(this.barcodeConfig.printWidth) || 100,
+        printHeight: parseInt(this.barcodeConfig.printHeight) || 60,
+        qrcodeSize: parseInt(this.barcodeConfig.qrcodeSize) || 120,
+        fontSize: parseInt(this.barcodeConfig.fontSize) || 10,
+        fontWeight: this.barcodeConfig.fontWeight || 'normal',
+        customTextTop: this.barcodeConfig.customTextTop || '',
+        customTextBottom: this.barcodeConfig.customTextBottom || ''
+      }
+    },
+    previewModalStyle() {
+      return {
+        width: `${this.previewConfig.printWidth + 40}px`,
+        maxWidth: '90%'
+      }
+    },
+    previewContentStyle() {
+      return {
+        fontSize: `${this.previewConfig.fontSize}px`,
+        fontWeight: this.previewConfig.fontWeight
+      }
+    },
+    previewLeftFields() {
+      return this.availableFields.filter(f => f.visible && f.position === 'left')
+    },
+    previewBottomFields() {
+      return this.availableFields.filter(f => f.visible && f.position === 'bottom')
     }
   },
   mounted() {
@@ -297,21 +342,6 @@ export default {
     async loadData() {
       this.loading = true
       try {
-        // 尝试从本地存储加载数据
-        const localModelOptions = localStorage.getItem('modelOptions')
-        const localProductionLineOptions = localStorage.getItem('productionLineOptions')
-        const localSupplierOptions = localStorage.getItem('supplierOptions')
-        const localRawMaterialOptions = localStorage.getItem('rawMaterialOptions')
-        
-        if (localModelOptions && localProductionLineOptions && localSupplierOptions && localRawMaterialOptions) {
-          this.modelOptions = JSON.parse(localModelOptions)
-          this.productionLineOptions = JSON.parse(localProductionLineOptions)
-          this.supplierOptions = JSON.parse(localSupplierOptions)
-          this.rawMaterialOptions = JSON.parse(localRawMaterialOptions)
-          console.log('从本地存储加载数据成功')
-        }
-        
-        // 从服务器获取其他数据
         const [initResponse, configResponse, modelOptionsResponse, lineOptionsResponse, supplierOptionsResponse, rawMaterialOptionsResponse] = await Promise.all([
           fetch('/api/barcodes/init-data'),
           fetch('/api/barcodes/barcode-config'),
@@ -327,13 +357,6 @@ export default {
         const supplierOptions = await supplierOptionsResponse.json()
         const rawMaterialOptions = await rawMaterialOptionsResponse.json()
 
-        // 保存到本地存储
-        localStorage.setItem('modelOptions', JSON.stringify(modelOptions))
-        localStorage.setItem('productionLineOptions', JSON.stringify(productionLineOptions))
-        localStorage.setItem('supplierOptions', JSON.stringify(supplierOptions))
-        localStorage.setItem('rawMaterialOptions', JSON.stringify(rawMaterialOptions))
-        
-        // 更新数据
         this.modelOptions = modelOptions
         this.productionLineOptions = productionLineOptions
         this.supplierOptions = supplierOptions
@@ -343,7 +366,22 @@ export default {
         this.printedBatches = new Set(data.printedBatches)
         this.barcodeConfig = { ...this.barcodeConfig, ...configData }
         
-        // 从localStorage读取上次选择的值
+        if (configData.fields) {
+          try {
+            this.availableFields = JSON.parse(configData.fields)
+          } catch (e) {
+            console.error('解析字段配置失败:', e)
+          }
+        }
+        if (configData.encodingFields) {
+          try {
+            this.barcodeConfig.encodingFields = JSON.parse(configData.encodingFields)
+          } catch (e) {
+            console.error('解析编码字段配置失败:', e)
+          }
+        }
+        
+        // 恢复上次选择的值
         const lastSupplier = localStorage.getItem('lastSupplier')
         const lastProductionLine = localStorage.getItem('lastProductionLine')
         const lastModel = localStorage.getItem('lastModel')
@@ -359,38 +397,7 @@ export default {
         if (lastQuantity) this.product.quantity = lastQuantity
       } catch (error) {
         console.error('加载数据失败:', error)
-        // 如果服务器加载失败，尝试使用本地存储的数据
-        const localModelOptions = localStorage.getItem('modelOptions')
-        const localProductionLineOptions = localStorage.getItem('productionLineOptions')
-        const localSupplierOptions = localStorage.getItem('supplierOptions')
-        const localRawMaterialOptions = localStorage.getItem('rawMaterialOptions')
-        
-        if (localModelOptions && localProductionLineOptions && localSupplierOptions && localRawMaterialOptions) {
-          this.modelOptions = JSON.parse(localModelOptions)
-          this.productionLineOptions = JSON.parse(localProductionLineOptions)
-          this.supplierOptions = JSON.parse(localSupplierOptions)
-          this.rawMaterialOptions = JSON.parse(localRawMaterialOptions)
-          console.log('服务器加载失败，使用本地存储数据')
-          
-          // 从localStorage读取上次选择的值
-          const lastSupplier = localStorage.getItem('lastSupplier')
-          const lastProductionLine = localStorage.getItem('lastProductionLine')
-          const lastModel = localStorage.getItem('lastModel')
-          const lastRawMaterial = localStorage.getItem('lastRawMaterial')
-          const lastProductionDate = localStorage.getItem('lastProductionDate')
-          const lastQuantity = localStorage.getItem('lastQuantity')
-          
-          if (lastSupplier) this.product.supplier = lastSupplier
-          if (lastProductionLine) this.product.productionLine = lastProductionLine
-          if (lastModel) this.product.model = lastModel
-          if (lastRawMaterial) this.product.rawMaterial = lastRawMaterial
-          if (lastProductionDate) this.product.productionDate = lastProductionDate
-          if (lastQuantity) this.product.quantity = lastQuantity
-          
-          alert('服务器加载失败，使用本地存储数据')
-        } else {
-          alert('加载数据失败，请检查服务器是否运行')
-        }
+        alert('加载数据失败，请检查服务器是否运行')
       } finally {
         this.loading = false
       }
@@ -440,6 +447,16 @@ export default {
 
       this.loading = true
       try {
+        if (!this.product.supplier) {
+          alert('请选择供应商')
+          this.loading = false
+          return
+        }
+        if (!this.product.productionLine) {
+          alert('请选择生产线')
+          this.loading = false
+          return
+        }
         const response = await fetch('/api/barcodes/generate', {
           method: 'POST',
           headers: {
@@ -460,6 +477,12 @@ export default {
           throw new Error(error.error || '生成失败')
         }
 
+        console.log('=== 前端发送的数据 ===')
+        console.log('supplier:', this.product.supplier)
+        console.log('productionLine:', this.product.productionLine)
+        console.log('model:', this.product.model)
+        console.log('rawMaterial:', this.product.rawMaterial)
+
         const data = await response.json()
         this.generatedBarcodes = data.barcodes
         this.sequenceTracker = data.sequenceTracker
@@ -476,8 +499,129 @@ export default {
         this.loading = false
       }
     },
+    getFieldDisplayValue(field, barcodeData) {
+      const now = new Date()
+      const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`
+      
+      const valueMap = {
+        supplier: barcodeData.supplier || '',
+        productionLine: barcodeData.productionLine || barcodeData.production_line || '',
+        model: barcodeData.model || '',
+        rawMaterial: barcodeData.rawMaterial || barcodeData.raw_material || '',
+        productionDate: barcodeData.productionDate || barcodeData.production_date || '',
+        sequence: barcodeData.sequence ? barcodeData.sequence.toString().padStart(4, '0') : '',
+        batchCode: barcodeData.batchCode || barcodeData.batch_code || '',
+        currentTime: currentTime
+      }
+      
+      const getAbbreviation = (key, value) => {
+        if (!value) return ''
+        switch(key) {
+          case 'supplier':
+            const supplierOpt = this.supplierOptions.find(o => o.value === value)
+            return supplierOpt?.abbreviation || value.substring(0, 2)
+          case 'productionLine':
+            const lineOpt = this.productionLineOptions.find(o => o.value === value)
+            return lineOpt?.abbreviation || value.replace('LINE-', '')
+          case 'model':
+            const modelOpt = this.modelOptions.find(o => o.value === value)
+            return modelOpt?.abbreviation || value.replace(/[^a-zA-Z0-9]/g, '').substring(0, 4)
+          case 'rawMaterial':
+            const rawOpt = this.rawMaterialOptions.find(o => o.value === value)
+            return rawOpt?.abbreviation || value.substring(0, 4)
+          case 'productionDate':
+            return value.replace(/-/g, '').substring(2)
+          case 'currentTime':
+            return currentTime.replace(':', '')
+          default:
+            return value
+        }
+      }
+      
+      const value = valueMap[field.key] || ''
+      const abbreviation = getAbbreviation(field.key, value)
+      
+      if (field.format === 'abbreviation') return abbreviation
+      if (field.format === 'both') return `${abbreviation}：${value}`
+      return value
+    },
     async printSingleBarcode(barcode) {
+      try {
+        const configResponse = await fetch('/api/barcodes/barcode-config')
+        const configData = await configResponse.json()
+        this.barcodeConfig = { ...this.barcodeConfig, ...configData }
+        if (configData.fields) {
+          try {
+            this.availableFields = JSON.parse(configData.fields)
+          } catch (e) {
+            console.error('解析字段配置失败:', e)
+          }
+        }
+      } catch (e) {
+        console.error('重新加载配置失败:', e)
+      }
+      
       const cfg = this.barcodeConfig
+      const qrcodeSize = parseInt(cfg.qrcodeSize) || 120
+      const fontSize = parseInt(cfg.fontSize) || 10
+
+      const now = new Date()
+      const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`
+
+      const getFieldDisplayValue = (field) => {
+        const valueMap = {
+          supplier: barcode.supplier || '',
+          productionLine: barcode.productionLine || barcode.production_line || '',
+          model: barcode.model || '',
+          rawMaterial: barcode.rawMaterial || barcode.raw_material || '',
+          productionDate: barcode.productionDate || barcode.production_date || '',
+          sequence: barcode.sequence ? barcode.sequence.toString().padStart(4, '0') : '',
+          batchCode: barcode.batchCode || barcode.batch_code || '',
+          currentTime: currentTime
+        }
+
+        const getAbbreviation = (key, value) => {
+          if (!value) return ''
+          switch(key) {
+            case 'supplier':
+              const supplierOpt = this.supplierOptions.find(o => o.value === value)
+              return supplierOpt?.abbreviation || value.substring(0, 2)
+            case 'productionLine':
+              const lineOpt = this.productionLineOptions.find(o => o.value === value)
+              return lineOpt?.abbreviation || value.replace('LINE-', '')
+            case 'model':
+              const modelOpt = this.modelOptions.find(o => o.value === value)
+              return modelOpt?.abbreviation || value.replace(/[^a-zA-Z0-9]/g, '').substring(0, 4)
+            case 'rawMaterial':
+              const rawOpt = this.rawMaterialOptions.find(o => o.value === value)
+              return rawOpt?.abbreviation || value.substring(0, 4)
+            case 'productionDate':
+              return value.replace(/-/g, '').substring(2)
+            case 'currentTime':
+              return currentTime.replace(':', '')
+            default:
+              return value
+          }
+        }
+
+        const value = valueMap[field.key] || ''
+        const abbreviation = getAbbreviation(field.key, value)
+
+        if (field.format === 'abbreviation') return abbreviation
+        if (field.format === 'both') return `${abbreviation}：${value}`
+        return value
+      }
+
+      const leftFields = this.availableFields.filter(f => f.visible && f.position === 'left')
+      const bottomFields = this.availableFields.filter(f => f.visible && f.position === 'bottom')
+
+      const leftFieldsHtml = leftFields.map(field => 
+        `<div class="print-left-item">${field.label}：${getFieldDisplayValue(field)}</div>`
+      ).join('')
+
+      const bottomFieldsHtml = bottomFields.map(field => 
+        `<div class="print-field">${field.label}：${getFieldDisplayValue(field)}</div>`
+      ).join('')
 
       const printWindow = window.open('', '_blank')
       
@@ -486,34 +630,34 @@ export default {
           <head>
             <title>打印二维码</title>
             <style>
-              body { margin: 0; padding: 0; font-family: Arial, sans-serif; }
-              @media print { @page { size: auto; } }
-              .print-content {
-                text-align: center; padding: 20px;
+              body { margin: 0; padding: ${cfg.printPadding}mm; font-family: Arial, sans-serif; }
+              @media print { @page { size: ${cfg.printWidth}mm ${cfg.printHeight}mm; margin: 0; } }
+              .print-box { 
+                width: ${cfg.printWidth}mm; 
+                min-height: ${cfg.printHeight}mm; 
+                padding: ${cfg.printPadding}mm;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
               }
-              .print-barcode {
-                font-size: 24px; font-weight: bold; margin-bottom: 20px;
-              }
-              .print-info {
-                margin-top: 20px; font-size: 16px;
-              }
-              .print-time {
-                margin-top: 30px; font-size: 12px; color: #999;
-              }
+              .print-content { display: flex; align-items: center; gap: 8px; }
+              .print-left { display: flex; flex-direction: column; }
+              .print-left-item { font-size: ${fontSize - 2}px; white-space: nowrap; }
+              .print-qrcode img { max-width: ${qrcodeSize}px; height: auto; }
+              .print-code { font-size: ${fontSize}px; font-weight: bold; margin: 5px 0; font-family: monospace; }
+              .print-fields { display: flex; flex-wrap: wrap; gap: 8px; margin: 5px 0; justify-content: center; }
+              .print-field { font-size: ${fontSize - 2}px; }
             </style>
           </head>
           <body>
-            <div class="print-content">
-              <div class="print-barcode">${barcode.code}</div>
-              <canvas id="printBarcodeCanvas" style="margin: 20px auto;"></canvas>
-              <div class="print-info">
-                <p>产品型号：${barcode.model}</p>
-                <p>序号：${barcode.sequence}</p>
-                <p>生产日期：${barcode.production_date || barcode.productionDate}</p>
+            <div class="print-box">
+              <div class="print-content">
+                ${leftFieldsHtml ? `<div class="print-left">${leftFieldsHtml}</div>` : ''}
+                <div class="print-qrcode"><canvas id="printBarcodeCanvas"></canvas></div>
               </div>
-              <div class="print-time">
-                <p>生成时间：${new Date().toLocaleString('zh-CN')}</p>
-              </div>
+              <div class="print-code">${barcode.code}</div>
+              ${bottomFieldsHtml ? `<div class="print-fields">${bottomFieldsHtml}</div>` : ''}
             </div>
           </body>
         </html>
@@ -521,12 +665,10 @@ export default {
       
       printWindow.document.close()
       
-      // 等待窗口加载完成后生成二维码
       setTimeout(async () => {
         const printCanvas = printWindow.document.getElementById('printBarcodeCanvas')
-        // 生成二维码
         await QRCode.toCanvas(printCanvas, barcode.code, {
-          width: 200,
+          width: qrcodeSize,
           margin: 1
         })
         
@@ -557,19 +699,97 @@ export default {
         console.error('标记打印状态失败:', error)
       }
 
+      try {
+        const configResponse = await fetch('/api/barcodes/barcode-config')
+        const configData = await configResponse.json()
+        this.barcodeConfig = { ...this.barcodeConfig, ...configData }
+        if (configData.fields) {
+          try {
+            this.availableFields = JSON.parse(configData.fields)
+          } catch (e) {
+            console.error('解析字段配置失败:', e)
+          }
+        }
+      } catch (e) {
+        console.error('重新加载配置失败:', e)
+      }
+
+      const cfg = this.barcodeConfig
+      const qrcodeSize = parseInt(cfg.qrcodeSize) || 120
+      const fontSize = parseInt(cfg.fontSize) || 10
+      
+      const now = new Date()
+      const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`
+
+      const getFieldDisplayValue = (field, barcodeData) => {
+        const valueMap = {
+          supplier: barcodeData.supplier || '',
+          productionLine: barcodeData.productionLine || barcodeData.production_line || '',
+          model: barcodeData.model || '',
+          rawMaterial: barcodeData.rawMaterial || barcodeData.raw_material || '',
+          productionDate: barcodeData.productionDate || barcodeData.production_date || '',
+          sequence: barcodeData.sequence ? barcodeData.sequence.toString().padStart(4, '0') : '',
+          batchCode: barcodeData.batchCode || barcodeData.batch_code || '',
+          currentTime: currentTime
+        }
+        
+        const getAbbreviation = (key, value) => {
+          if (!value) return ''
+          switch(key) {
+            case 'supplier':
+              const supplierOpt = this.supplierOptions.find(o => o.value === value)
+              return supplierOpt?.abbreviation || value.substring(0, 2)
+            case 'productionLine':
+              const lineOpt = this.productionLineOptions.find(o => o.value === value)
+              return lineOpt?.abbreviation || value.replace('LINE-', '')
+            case 'model':
+              const modelOpt = this.modelOptions.find(o => o.value === value)
+              return modelOpt?.abbreviation || value.replace(/[^a-zA-Z0-9]/g, '').substring(0, 4)
+            case 'rawMaterial':
+              const rawOpt = this.rawMaterialOptions.find(o => o.value === value)
+              return rawOpt?.abbreviation || value.substring(0, 4)
+            case 'productionDate':
+              return value.replace(/-/g, '').substring(2)
+            case 'currentTime':
+              return currentTime.replace(':', '')
+            default:
+              return value
+          }
+        }
+        
+        const value = valueMap[field.key] || ''
+        const abbreviation = getAbbreviation(field.key, value)
+        
+        if (field.format === 'abbreviation') return abbreviation
+        if (field.format === 'both') return `${abbreviation}：${value}`
+        return value
+      }
+
+      const leftFields = this.availableFields.filter(f => f.visible && f.position === 'left')
+      const bottomFields = this.availableFields.filter(f => f.visible && f.position === 'bottom')
+
       const printWindow = window.open('', '_blank')
       let printHtml = ''
 
       barcodesToPrint.forEach((barcode, index) => {
         const canvasId = `barcode_${index}`
+        
+        const leftFieldsHtml = leftFields.map(field => 
+          `<div class="print-left-item">${field.label}：${getFieldDisplayValue(field, barcode)}</div>`
+        ).join('')
+
+        const bottomFieldsHtml = bottomFields.map(field => 
+          `<div class="print-field">${field.label}：${getFieldDisplayValue(field, barcode)}</div>`
+        ).join('')
+
         printHtml += `
-          <div style="page-break-after: always; text-align: center; padding: 20px;">
-            <div style="font-size: 20px; font-weight: bold; margin-bottom: 15px;">${barcode.code}</div>
-            <canvas id="${canvasId}" style="margin: 10px auto;"></canvas>
-            <div style="margin-top: 10px; font-size: 12px;">
-              <p style="margin: 2px 0;">型号：${barcode.model}</p>
-              <p style="margin: 2px 0;">日期：${barcode.production_date || barcode.productionDate}</p>
+          <div class="print-box">
+            <div class="print-content">
+              ${leftFieldsHtml ? `<div class="print-left">${leftFieldsHtml}</div>` : ''}
+              <div class="print-qrcode"><canvas id="${canvasId}"></canvas></div>
             </div>
+            <div class="print-code">${barcode.code}</div>
+            ${bottomFieldsHtml ? `<div class="print-fields">${bottomFieldsHtml}</div>` : ''}
           </div>
         `
       })
@@ -579,8 +799,23 @@ export default {
           <head>
             <title>批量打印编码</title>
             <style>
-              body { margin: 0; padding: 0; font-family: Arial, sans-serif; }
-              @media print { @page { size: auto; margin: 10mm; } }
+              body { margin: 0; padding: ${cfg.printPadding}mm; font-family: Arial, sans-serif; }
+              @media print { @page { size: ${cfg.printWidth}mm ${cfg.printHeight}mm; margin: 0; } }
+              .print-box { 
+                width: ${cfg.printWidth}mm; 
+                min-height: ${cfg.printHeight}mm; 
+                padding: ${cfg.printPadding}mm;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                page-break-after: always;
+              }
+              .print-content { display: flex; align-items: center; gap: 8px; }
+              .print-left { display: flex; flex-direction: column; }
+              .print-left-item { font-size: ${fontSize - 2}px; white-space: nowrap; }
+              .print-qrcode { margin: 5px 0; }
+              .print-code { font-size: ${fontSize}px; font-weight: bold; margin: 5px 0; font-family: monospace; }
             </style>
           </head>
           <body>${printHtml}</body>
@@ -594,9 +829,8 @@ export default {
           const canvasId = `barcode_${index}`
           const canvasElement = printWindow.document.getElementById(canvasId)
           if (canvasElement) {
-            // 生成二维码
             await QRCode.toCanvas(canvasElement, barcode.code, {
-              width: 150,
+              width: qrcodeSize,
               margin: 1
             })
           }
@@ -615,19 +849,84 @@ export default {
         const response = await fetch(`/api/barcodes/batches/${batch.batch_code}/barcodes`)
         const barcodes = await response.json()
 
+        const cfg = this.barcodeConfig
+        const qrcodeSize = parseInt(cfg.qrcodeSize) || 120
+        const fontSize = parseInt(cfg.fontSize) || 10
+        
+        const now = new Date()
+        const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`
+
+        const getFieldDisplayValue = (field, barcodeData) => {
+          const valueMap = {
+            supplier: barcodeData.supplier || '',
+            productionLine: barcodeData.productionLine || barcodeData.production_line || '',
+            model: barcodeData.model || '',
+            rawMaterial: barcodeData.rawMaterial || barcodeData.raw_material || '',
+            productionDate: barcodeData.productionDate || barcodeData.production_date || '',
+            sequence: barcodeData.sequence ? barcodeData.sequence.toString().padStart(4, '0') : '',
+            batchCode: barcodeData.batchCode || barcodeData.batch_code || '',
+            currentTime: currentTime
+          }
+          
+          const getAbbreviation = (key, value) => {
+            if (!value) return ''
+            switch(key) {
+              case 'supplier':
+                const supplierOpt = this.supplierOptions.find(o => o.value === value)
+                return supplierOpt?.abbreviation || value.substring(0, 2)
+              case 'productionLine':
+                const lineOpt = this.productionLineOptions.find(o => o.value === value)
+                return lineOpt?.abbreviation || value.replace('LINE-', '')
+              case 'model':
+                const modelOpt = this.modelOptions.find(o => o.value === value)
+                return modelOpt?.abbreviation || value.replace(/[^a-zA-Z0-9]/g, '').substring(0, 4)
+              case 'rawMaterial':
+                const rawOpt = this.rawMaterialOptions.find(o => o.value === value)
+                return rawOpt?.abbreviation || value.substring(0, 4)
+              case 'productionDate':
+                return value.replace(/-/g, '').substring(2)
+              case 'currentTime':
+                return currentTime.replace(':', '')
+              default:
+                return value
+            }
+          }
+          
+          const value = valueMap[field.key] || ''
+          const abbreviation = getAbbreviation(field.key, value)
+          
+          if (field.format === 'abbreviation') return abbreviation
+          if (field.format === 'both') return `${abbreviation}：${value}`
+          return value
+        }
+
+        const leftFields = this.availableFields.filter(f => f.visible && f.position === 'left')
+        const bottomFields = this.availableFields.filter(f => f.visible && f.position === 'bottom')
+
         const printWindow = window.open('', '_blank')
         let printHtml = ''
 
         barcodes.forEach((barcode, index) => {
           const canvasId = `barcode_${index}`
+          
+          const leftFieldsHtml = leftFields.map(field => 
+            `<div class="print-left-item">${getFieldDisplayValue(field, barcode)}</div>`
+          ).join('')
+          
+          const bottomFieldsHtml = bottomFields.map(field => 
+            `<div class="print-field">${getFieldDisplayValue(field, barcode)}</div>`
+          ).join('')
+
           printHtml += `
-            <div style="page-break-after: always; text-align: center; padding: 20px;">
-              <div style="font-size: 20px; font-weight: bold; margin-bottom: 15px;">${barcode.code}</div>
-              <canvas id="${canvasId}" style="margin: 10px auto;"></canvas>
-              <div style="margin-top: 10px; font-size: 12px;">
-                <p style="margin: 2px 0;">型号：${barcode.model}</p>
-                <p style="margin: 2px 0;">日期：${barcode.production_date}</p>
+            <div class="print-box">
+              ${cfg.customTextTop ? `<div class="print-text">${cfg.customTextTop}</div>` : ''}
+              <div class="print-content">
+                ${leftFieldsHtml ? `<div class="print-left">${leftFieldsHtml}</div>` : ''}
+                <div class="print-qrcode"><canvas id="${canvasId}"></canvas></div>
               </div>
+              <div class="print-code">${barcode.code}</div>
+              ${bottomFieldsHtml ? `<div class="print-fields">${bottomFieldsHtml}</div>` : ''}
+              ${cfg.customTextBottom ? `<div class="print-text">${cfg.customTextBottom}</div>` : ''}
             </div>
           `
         })
@@ -637,8 +936,25 @@ export default {
             <head>
               <title>批次打印编码 - ${batch.batch_code}</title>
               <style>
-                body { margin: 0; padding: 0; font-family: Arial, sans-serif; }
-                @media print { @page { size: auto; margin: 10mm; } }
+                body { margin: 0; padding: ${cfg.printPadding}mm; font-family: Arial, sans-serif; }
+                @media print { @page { size: ${cfg.printWidth}mm ${cfg.printHeight}mm; margin: 0; } }
+                .print-box { 
+                  width: ${cfg.printWidth}mm; 
+                  min-height: ${cfg.printHeight}mm; 
+                  padding: ${cfg.printPadding}mm;
+                  display: flex;
+                  flex-direction: column;
+                  align-items: center;
+                  page-break-after: always;
+                }
+                .print-text { font-size: ${fontSize}px; font-weight: ${cfg.fontWeight}; margin: 2px 0; }
+                .print-content { display: flex; align-items: center; gap: 5mm; }
+                .print-left { display: flex; flex-direction: column; }
+                .print-left-item { font-size: ${fontSize - 2}px; white-space: nowrap; }
+                .print-qrcode { margin: 5px 0; }
+                .print-code { font-size: ${fontSize}px; font-weight: bold; margin: 5px 0; font-family: monospace; }
+                .print-fields { display: flex; flex-wrap: wrap; gap: 8px; margin: 5px 0; justify-content: center; }
+                .print-field { font-size: ${fontSize - 2}px; }
               </style>
             </head>
             <body>${printHtml}</body>
@@ -652,9 +968,8 @@ export default {
             const canvasId = `barcode_${index}`
             const canvasElement = printWindow.document.getElementById(canvasId)
             if (canvasElement) {
-              // 生成二维码
               await QRCode.toCanvas(canvasElement, barcode.code, {
-                width: 150,
+                width: qrcodeSize,
                 margin: 1
               })
             }
@@ -691,18 +1006,81 @@ export default {
       this.viewingBatchDetail = false
       this.currentViewingBatch = null
     },
+    getPreviewFieldValue(field) {
+      const barcode = this.previewBarcode
+      const now = new Date()
+      const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`
+      
+      const valueMap = {
+        supplier: barcode.supplier || '',
+        productionLine: barcode.productionLine || barcode.production_line || '',
+        model: barcode.model || '',
+        rawMaterial: barcode.rawMaterial || barcode.raw_material || '',
+        productionDate: barcode.productionDate || barcode.production_date || '',
+        sequence: barcode.sequence ? barcode.sequence.toString().padStart(4, '0') : '',
+        batchCode: barcode.batchCode || barcode.batch_code || '',
+        currentTime: currentTime
+      }
+      
+      const getAbbreviation = (key, value) => {
+        if (!value) return ''
+        switch(key) {
+          case 'supplier':
+            const supplierOpt = this.supplierOptions.find(o => o.value === value)
+            return supplierOpt?.abbreviation || value.substring(0, 2)
+          case 'productionLine':
+            const lineOpt = this.productionLineOptions.find(o => o.value === value)
+            return lineOpt?.abbreviation || value.replace('LINE-', '')
+          case 'model':
+            const modelOpt = this.modelOptions.find(o => o.value === value)
+            return modelOpt?.abbreviation || value.replace(/[^a-zA-Z0-9]/g, '').substring(0, 4)
+          case 'rawMaterial':
+            const rawOpt = this.rawMaterialOptions.find(o => o.value === value)
+            return rawOpt?.abbreviation || value.substring(0, 4)
+          case 'productionDate':
+            return value.replace(/-/g, '').substring(2)
+          case 'currentTime':
+            return currentTime.replace(':', '')
+          default:
+            return value
+        }
+      }
+      
+      const value = valueMap[field.key] || ''
+      const abbreviation = getAbbreviation(field.key, value)
+      
+      if (field.format === 'abbreviation') return abbreviation
+      if (field.format === 'both') return `${abbreviation}：${value}`
+      return value
+    },
     async previewSingleBarcode(barcode) {
       this.previewBarcode = barcode
+      
+      try {
+        const configResponse = await fetch('/api/barcodes/barcode-config')
+        const configData = await configResponse.json()
+        
+        this.barcodeConfig = { ...this.barcodeConfig, ...configData }
+        
+        if (configData.fields) {
+          try {
+            this.availableFields = JSON.parse(configData.fields)
+          } catch (e) {
+            console.error('解析字段配置失败:', e)
+          }
+        }
+      } catch (e) {
+        console.error('重新加载配置失败:', e)
+      }
+      
       this.showPreviewModal = true
       
-      // 等待DOM更新，确保预览Canvas已渲染
       await this.$nextTick()
       
       const previewCanvas = this.$refs.previewCanvas
       if (previewCanvas) {
-        // 生成二维码
         await QRCode.toCanvas(previewCanvas, barcode.code, {
-          width: 200,
+          width: this.previewConfig.qrcodeSize,
           margin: 1
         })
       }
@@ -717,47 +1095,7 @@ export default {
       }
       this.closePreviewModal()
     },
-    async syncData() {
-      try {
-        const [modelOptionsResponse, lineOptionsResponse, supplierOptionsResponse, rawMaterialOptionsResponse] = await Promise.all([
-          fetch('/api/barcodes/dropdown-options?category=model'),
-          fetch('/api/barcodes/dropdown-options?category=production_line'),
-          fetch('/api/barcodes/dropdown-options?category=supplier'),
-          fetch('/api/barcodes/dropdown-options?category=raw_material')
-        ])
-        
-        const modelOptions = await modelOptionsResponse.json()
-        const productionLineOptions = await lineOptionsResponse.json()
-        const supplierOptions = await supplierOptionsResponse.json()
-        const rawMaterialOptions = await rawMaterialOptionsResponse.json()
-        
-        // 保存到本地存储
-        localStorage.setItem('modelOptions', JSON.stringify(modelOptions))
-        localStorage.setItem('productionLineOptions', JSON.stringify(productionLineOptions))
-        localStorage.setItem('supplierOptions', JSON.stringify(supplierOptions))
-        localStorage.setItem('rawMaterialOptions', JSON.stringify(rawMaterialOptions))
-        
-        // 更新当前数据
-        this.modelOptions = modelOptions
-        this.productionLineOptions = productionLineOptions
-        this.supplierOptions = supplierOptions
-        this.rawMaterialOptions = rawMaterialOptions
-        
-        alert('数据同步成功！')
-      } catch (error) {
-        console.error('同步数据失败:', error)
-        alert('同步数据失败，请检查服务器是否运行')
-      }
-    },
-    clearLocalData() {
-      if (confirm('确定要清除本地数据吗？这将删除所有保存在本地的数据。')) {
-        localStorage.removeItem('modelOptions')
-        localStorage.removeItem('productionLineOptions')
-        localStorage.removeItem('supplierOptions')
-        localStorage.removeItem('rawMaterialOptions')
-        alert('本地数据已清除！')
-      }
-    },
+    
     isBatchPrinted(batchCode) {
       return this.printedBatches.has(batchCode)
     },
@@ -791,8 +1129,6 @@ export default {
 .preview-modal {
   background-color: white;
   border-radius: 8px;
-  width: 400px;
-  max-width: 90%;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
@@ -818,6 +1154,67 @@ export default {
 
 .close-btn:hover {
   color: #333;
+}
+
+.preview-content {
+  padding: 15px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.preview-text {
+  font-size: 11px;
+  margin: 2px 0;
+}
+
+.preview-text-top {
+  font-weight: bold;
+}
+
+.preview-text-bottom {
+  color: #666;
+}
+
+.preview-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 5px 0;
+}
+
+.preview-left-fields {
+  display: flex;
+  flex-direction: column;
+}
+
+.preview-left-item {
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.preview-qrcode {
+  margin: 5px 0;
+}
+
+.preview-code {
+  font-family: monospace;
+  font-size: 10px;
+  font-weight: bold;
+  margin: 5px 0;
+}
+
+.preview-fields-bottom {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin: 3px 0;
+}
+
+.preview-field-item {
+  font-size: 10px;
+  color: #666;
 }
 
 .modal-footer {

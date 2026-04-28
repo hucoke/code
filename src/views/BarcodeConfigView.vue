@@ -10,7 +10,7 @@
           <div class="subsection">
             <label class="section-label">编码组成字段</label>
             <div class="encoding-fields">
-              <div v-for="(field, index) in config.encodingFields" :key="field.key" class="encoding-item">
+              <div v-for="(field, index) in config.encodingFields" :key="index" class="encoding-item">
                 <span class="encoding-index">{{ index + 1 }}</span>
                 <span class="encoding-field">{{ getFieldLabel(field.key) }}</span>
                 <select v-model="field.format" class="encoding-format">
@@ -125,12 +125,12 @@
         <div class="preview-section">
           <h3>实时预览</h3>
           <div class="preview-container">
-            <div class="preview-box" :style="previewStyle">
-              <div v-if="config.customTextTop" class="preview-text preview-text-top">{{ config.customTextTop }}</div>
+            <div class="preview-box" :style="previewBoxStyle">
+              <div v-if="config.customTextTop" class="preview-text preview-text-top" :style="textStyle">{{ config.customTextTop }}</div>
               
               <div class="preview-content">
                 <div class="preview-left-fields" v-if="leftFields.length > 0">
-                  <div v-for="field in leftFields" :key="field.key" class="preview-left-item">
+                  <div v-for="field in leftFields" :key="field.key" class="preview-left-item" :style="smallTextStyle">
                     {{ getFieldDisplayValue(field) }}
                   </div>
                 </div>
@@ -140,15 +140,15 @@
                 </div>
               </div>
               
-              <div class="preview-code">{{ encodingPreview }}</div>
+              <div class="preview-code" :style="codeStyle">{{ encodingPreview }}</div>
               
               <div class="preview-fields-bottom">
-                <span v-for="field in bottomFields" :key="field.key" class="preview-field-item">
+                <span v-for="field in bottomFields" :key="field.key" class="preview-field-item" :style="smallTextStyle">
                   {{ getFieldDisplayValue(field) }}
                 </span>
               </div>
               
-              <div v-if="config.customTextBottom" class="preview-text preview-text-bottom">{{ config.customTextBottom }}</div>
+              <div v-if="config.customTextBottom" class="preview-text preview-text-bottom" :style="textStyle">{{ config.customTextBottom }}</div>
             </div>
           </div>
         </div>
@@ -206,6 +206,35 @@ export default {
         padding: `${this.config.printPadding}px`
       }
     },
+    previewBoxStyle() {
+      const baseStyle = this.previewStyle
+      return {
+        ...baseStyle,
+        fontSize: `${this.config.fontSize}px`,
+        fontWeight: this.config.fontWeight
+      }
+    },
+    textStyle() {
+      return {
+        fontSize: `${this.config.fontSize}px`,
+        fontWeight: this.config.fontWeight,
+        margin: '3px 0'
+      }
+    },
+    smallTextStyle() {
+      return {
+        fontSize: `${parseInt(this.config.fontSize) - 2}px`,
+        whiteSpace: 'nowrap'
+      }
+    },
+    codeStyle() {
+      return {
+        fontFamily: 'monospace',
+        fontSize: `${this.config.fontSize}px`,
+        fontWeight: 'bold',
+        margin: '5px 0'
+      }
+    },
     encodingPreview() {
       return this.config.encodingFields.map(fieldObj => {
         const field = this.availableFields.find(f => f.key === fieldObj.key)
@@ -247,16 +276,24 @@ export default {
         const response = await fetch('/api/barcodes/barcode-config')
         const data = await response.json()
         
-        if (data.fields) {
-          this.availableFields = JSON.parse(data.fields)
-        }
-        if (data.encodingFields) {
-          this.config.encodingFields = JSON.parse(data.encodingFields)
-        }
-        
         this.config = { ...this.config, ...data }
         
-        if (this.config.showQrcode === 'true' || this.config.showQrcode === true) {
+        if (data.fields) {
+          try {
+            this.availableFields = JSON.parse(data.fields)
+          } catch (e) {
+            console.error('解析字段配置失败:', e)
+          }
+        }
+        if (data.encodingFields) {
+          try {
+            this.config.encodingFields = JSON.parse(data.encodingFields)
+          } catch (e) {
+            console.error('解析编码字段配置失败:', e)
+          }
+        }
+        
+        if (this.config.showQrcode === 'true' || this.config.showQrcode === true || this.config.showQrcode === '1') {
           this.config.showQrcode = true
         } else {
           this.config.showQrcode = false

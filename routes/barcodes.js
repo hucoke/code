@@ -14,15 +14,25 @@ router.get('/init-data', (req, res) => {
   db.getSequenceTracker((sequenceTracker) => {
     db.getBatchSequenceTracker((batchSequenceTracker) => {
       db.getAllBatches((batches) => {
-        const batchesWithBarcodes = batches.map(batch => {
-          return {
-            ...batch,
-            barcodes: []
-          };
-        });
-
         db.getPrintedBatches((printedBatches) => {
           db.getAllBarcodes((allBarcodes) => {
+            // 将编码按批次分组
+            const barcodesByBatch = {};
+            allBarcodes.forEach(barcode => {
+              if (!barcodesByBatch[barcode.batch_code]) {
+                barcodesByBatch[barcode.batch_code] = [];
+              }
+              barcodesByBatch[barcode.batch_code].push(barcode);
+            });
+            
+            // 将编码关联到对应批次
+            const batchesWithBarcodes = batches.map(batch => {
+              return {
+                ...batch,
+                barcodes: barcodesByBatch[batch.batch_code] || []
+              };
+            });
+
             db.getDeliveryRecords((deliveryRecords) => {
               db.getReceivingRecords((receivingRecords) => {
                 db.getUsageRecords((usageRecords) => {
@@ -63,6 +73,14 @@ router.get('/batches/:batchCode/barcodes', (req, res) => {
 
 router.post('/generate', (req, res) => {
   const { model, quantity, productionDate, supplier, productionLine, rawMaterial } = req.body;
+
+  console.log('=== 接收到的请求参数 ===');
+  console.log('supplier:', supplier);
+  console.log('productionLine:', productionLine);
+  console.log('model:', model);
+  console.log('rawMaterial:', rawMaterial);
+  console.log('quantity:', quantity);
+  console.log('productionDate:', productionDate);
 
   if (!model || !quantity || !productionDate) {
     return res.status(400).json({ error: '缺少必要参数' });
@@ -193,7 +211,9 @@ router.post('/generate', (req, res) => {
               sequence: currentSequence,
               supplier: supplier,
               productionLine: productionLine,
-              rawMaterial: rawMaterial
+              rawMaterial: rawMaterial,
+              production_line: productionLine,
+              raw_material: rawMaterial
             });
           }
 
