@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import db from './db.js';
 import barcodeRoutes from './routes/barcodes.js';
+import path from 'path';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -63,6 +64,12 @@ app.delete('/api/users/:id', (req, res) => {
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'Server is running' });
+});
+
+app.use(express.static(path.join(path.dirname(new URL(import.meta.url).pathname), 'dist')));
+
+app.get('*', (req, res) => {
+  res.sendFile(path.join(path.dirname(new URL(import.meta.url).pathname), 'dist', 'index.html'));
 });
 
 app.listen(PORT, () => {

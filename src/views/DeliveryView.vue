@@ -21,10 +21,10 @@
               <router-link to="/usage" class="nav-link">使用</router-link>
             </li>
             <li class="nav-item">
-              <router-link to="/dashboard/barcode-maintenance" class="nav-link">编码维护</router-link>
+              <router-link to="/dashboard/barcode-maintenance" class="nav-link">条码维护</router-link>
             </li>
             <li class="nav-item">
-              <router-link to="/dashboard/barcode-config" class="nav-link">编码配置</router-link>
+              <router-link to="/dashboard/barcode-config" class="nav-link">条码配置</router-link>
             </li>
             <li class="nav-item">
               <router-link to="/dashboard/status-view" class="nav-link">状态查看</router-link>
@@ -42,14 +42,11 @@
     <div class="card">
       <h2>发货管理 - 扫码发货</h2>
       <div class="scan-area">
-        <h3>请扫描瓶胚框上的编码</h3>
+        <h3>请扫描瓶胚框上的条码</h3>
         <div class="form-group">
-          <input type="text" v-model="scannedBarcode" placeholder="或手动输入编码" @keyup.enter="processDelivery">
+          <input type="text" v-model="scannedBarcode" placeholder="或手动输入条码" @keyup.enter="processDelivery">
         </div>
         <div class="button-group">
-          <button class="btn btn-primary" @click="startScanner" :disabled="scannerActive">
-            {{ scannerActive ? '扫码中...' : '摄像头扫码' }}
-          </button>
           <button class="btn btn-primary" @click="processDelivery" :disabled="loading">确认发货</button>
         </div>
       </div>
@@ -57,7 +54,7 @@
       <div v-if="deliveryResult" class="card" style="margin-top: 20px;">
         <h3>发货结果</h3>
         <p v-if="deliveryResult.success" style="color: green;">
-          编码 {{ deliveryResult.barcode }} 发货成功！
+          条码 {{ deliveryResult.barcode }} 发货成功！
         </p>
         <p v-else style="color: red;">
           {{ deliveryResult.message }}
@@ -69,7 +66,7 @@
         <table>
           <thead>
             <tr>
-              <th>编码</th>
+              <th>条码</th>
               <th>产品型号</th>
               <th>发货日期</th>
               <th>发货时间</th>
@@ -86,40 +83,21 @@
         </table>
       </div>
     </div>
-
-    <div v-if="showScannerModal" class="modal-overlay">
-      <div class="modal scanner-modal">
-        <div class="modal-header">
-          <h3>摄像头扫码</h3>
-          <button class="close-btn" @click="stopScanner">&times;</button>
-        </div>
-        <div id="scanner-region" class="scanner-region"></div>
-        <p class="scanner-hint">将编码对准摄像头进行扫描</p>
-      </div>
-    </div>
   </div>
 </template>
 
 <script>
-import { Html5Qrcode } from 'html5-qrcode'
-
 export default {
   data() {
     return {
       scannedBarcode: '',
       deliveryResult: null,
       deliveryRecords: [],
-      loading: false,
-      showScannerModal: false,
-      scannerActive: false,
-      html5QrCode: null
+      loading: false
     }
   },
   mounted() {
     this.loadDeliveryRecords()
-  },
-  beforeUnmount() {
-    this.stopScanner()
   },
   methods: {
     async loadDeliveryRecords() {
@@ -134,106 +112,11 @@ export default {
       localStorage.removeItem('loggedIn')
       this.$router.push('/')
     },
-    async startScanner() {
-      try {
-        if (window.location.protocol !== 'https:') {
-          alert('摄像头功能需要在HTTPS安全连接下使用，请使用HTTPS访问本网站')
-          this.stopScanner()
-          return
-        }
-
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-          alert('您的浏览器不支持摄像头功能，请使用现代浏览器如Chrome、Firefox或Edge')
-          this.stopScanner()
-          return
-        }
-
-        this.showScannerModal = true
-        this.scannerActive = true
-
-        await this.$nextTick()
-
-        this.html5QrCode = new Html5Qrcode('scanner-region')
-
-        let scannerStarted = false
-        const cameraModes = [
-          { facingMode: 'environment' },
-          { facingMode: 'user' },
-          undefined
-        ]
-
-        for (const mode of cameraModes) {
-          try {
-            console.log('尝试启动扫码器，模式:', mode)
-            await this.html5QrCode.start(
-              mode,
-              {
-                fps: 10,
-                qrbox: { width: 250, height: 150 },
-                aspectRatio: 1.777778
-              },
-              (decodedText) => {
-                this.scannedBarcode = decodedText
-                this.stopScanner()
-                this.processDelivery()
-              },
-              (errorMessage) => {
-                console.log('扫码中...')
-              }
-            )
-            scannerStarted = true
-            break
-          } catch (scannerError) {
-            console.log('扫码器启动失败，尝试下一个模式:', scannerError)
-            if (this.html5QrCode) {
-              try {
-                await this.html5QrCode.stop()
-              } catch (e) {}
-              this.html5QrCode = new Html5Qrcode('scanner-region')
-            }
-          }
-        }
-
-        if (!scannerStarted) {
-          throw new Error('所有摄像头模式都失败')
-        }
-
-      } catch (err) {
-        console.error('无法启动摄像头:', err)
-        let errorMessage = '无法访问摄像头'
-
-        if (err.name === 'NotAllowedError') {
-          errorMessage = '摄像头权限被拒绝，请在浏览器设置中允许使用摄像头。\n\n操作步骤：\n1. 点击浏览器地址栏左侧的锁图标\n2. 在权限设置中允许摄像头访问\n3. 刷新页面后重试'
-        } else if (err.name === 'NotFoundError') {
-          errorMessage = '未找到摄像头设备，请确保您的设备有摄像头并已正确连接'
-        } else if (err.name === 'OverconstrainedError') {
-          errorMessage = '摄像头约束不满足，尝试使用其他摄像头'
-        } else if (err.message.includes('browser does not support')) {
-          errorMessage = '浏览器不支持摄像头功能，请使用现代浏览器如Chrome、Firefox或Edge'
-        }
-
-        alert(errorMessage + '\n\n错误详情: ' + (err.message || err))
-        this.stopScanner()
-      }
-    },
-    async stopScanner() {
-      this.showScannerModal = false
-      this.scannerActive = false
-
-      if (this.html5QrCode) {
-        try {
-          await this.html5QrCode.stop()
-          this.html5QrCode = null
-        } catch (err) {
-          console.error('停止扫码器失败:', err)
-        }
-      }
-    },
     async processDelivery() {
       if (!this.scannedBarcode) {
         this.deliveryResult = {
           success: false,
-          message: '请输入编码'
+          message: '请输入条码'
         }
         return
       }
@@ -285,62 +168,3 @@ export default {
   }
 }
 </script>
-
-<style scoped>
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.7);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.scanner-modal {
-  background-color: white;
-  border-radius: 8px;
-  width: 350px;
-  max-width: 90%;
-  text-align: center;
-}
-
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 15px;
-  border-bottom: 1px solid #ddd;
-}
-
-.modal-header h3 {
-  margin: 0;
-}
-
-.close-btn {
-  background: none;
-  border: none;
-  font-size: 24px;
-  cursor: pointer;
-  color: #666;
-}
-
-.close-btn:hover {
-  color: #333;
-}
-
-.scanner-region {
-  width: 100%;
-  min-height: 200px;
-  margin: 15px 0;
-}
-
-.scanner-hint {
-  padding: 10px;
-  color: #666;
-  font-size: 14px;
-}
-</style>
