@@ -180,7 +180,9 @@ function initialize() {
       const now = new Date().toISOString();
       const users = [
         ['yifan', 'yifan'],
-        ['yaojiao', 'yaojiao']
+        ['yaojiao', 'yaojiao'],
+        ['admin', 'admin'],
+        ['zhongfu', 'zhongfu']
       ];
 
       const stmt = db.prepare('INSERT OR IGNORE INTO users (username, password, created_at) VALUES (?, ?, ?)');

@@ -2,7 +2,7 @@
   <div class="user-management-content">
     <h2>用户管理</h2>
     <div class="user-actions">
-      <button @click="showAddUserForm = true" class="btn btn-primary">添加用户</button>
+      <button @click="openAddUserForm" class="btn btn-primary">添加用户</button>
     </div>
     <div v-if="loading" class="loading">加载中...</div>
     <div v-else>
@@ -73,10 +73,19 @@ export default {
     this.loadUsers();
   },
   methods: {
+    openAddUserForm() {
+      this.formData = {
+        id: null,
+        username: '',
+        password: ''
+      };
+      this.showAddUserForm = true;
+      this.showEditUserForm = false;
+    },
     async loadUsers() {
       this.loading = true;
       try {
-        const response = await fetch('http://localhost:3000/api/users');
+        const response = await fetch('/api/users');
         const data = await response.json();
         if (data.success) {
           this.users = data.users;
@@ -103,7 +112,7 @@ export default {
     async saveUser() {
       this.saving = true;
       try {
-        const response = await fetch('http://localhost:3000/api/users', {
+        const response = await fetch('/api/users', {
           method: this.showEditUserForm ? 'PUT' : 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -124,7 +133,7 @@ export default {
     async deleteUser(userId) {
       if (confirm('确定要删除这个用户吗？')) {
         try {
-          const response = await fetch(`http://localhost:3000/api/users/${userId}`, {
+          const response = await fetch(`/api/users/${userId}`, {
             method: 'DELETE'
           });
           const data = await response.json();

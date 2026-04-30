@@ -630,24 +630,28 @@ export default {
           <head>
             <title>打印二维码</title>
             <style>
-              body { margin: 0; padding: ${cfg.printPadding}mm; font-family: Arial, sans-serif; }
-              @media print { @page { size: ${cfg.printWidth}mm ${cfg.printHeight}mm; margin: 0; } }
+              * { margin: 0; padding: 0; box-sizing: border-box; }
+              body { margin: 0; padding: 0; font-family: Arial, sans-serif; width: ${cfg.printWidth}mm; height: ${cfg.printHeight}mm; }
+              @media print { 
+                @page { size: ${cfg.printWidth}mm ${cfg.printHeight}mm; margin: 0; }
+                body { width: ${cfg.printWidth}mm; height: ${cfg.printHeight}mm; overflow: hidden; }
+              }
               .print-box { 
-                width: ${cfg.printWidth}mm; 
-                min-height: ${cfg.printHeight}mm; 
+                width: 100%; 
+                height: 100%; 
                 padding: ${cfg.printPadding}mm;
                 display: flex;
                 flex-direction: column;
                 align-items: center;
                 justify-content: center;
               }
-              .print-content { display: flex; align-items: center; gap: 8px; }
+              .print-content { display: flex; align-items: center; gap: 5px; }
               .print-left { display: flex; flex-direction: column; }
-              .print-left-item { font-size: ${fontSize - 2}px; white-space: nowrap; }
-              .print-qrcode img { max-width: ${qrcodeSize}px; height: auto; }
-              .print-code { font-size: ${fontSize}px; font-weight: bold; margin: 5px 0; font-family: monospace; }
-              .print-fields { display: flex; flex-wrap: wrap; gap: 8px; margin: 5px 0; justify-content: center; }
-              .print-field { font-size: ${fontSize - 2}px; }
+              .print-left-item { font-size: ${fontSize}px; white-space: nowrap; }
+              .print-qrcode canvas { width: ${qrcodeSize}px; height: ${qrcodeSize}px; }
+              .print-code { font-size: ${fontSize}px; font-weight: bold; margin: 3px 0; font-family: monospace; }
+              .print-fields { display: flex; flex-wrap: wrap; gap: 5px; margin: 3px 0; justify-content: center; }
+              .print-field { font-size: ${fontSize}px; }
             </style>
           </head>
           <body>
@@ -799,11 +803,15 @@ export default {
           <head>
             <title>批量打印编码</title>
             <style>
-              body { margin: 0; padding: ${cfg.printPadding}mm; font-family: Arial, sans-serif; }
-              @media print { @page { size: ${cfg.printWidth}mm ${cfg.printHeight}mm; margin: 0; } }
+              * { margin: 0; padding: 0; box-sizing: border-box; }
+              body { margin: 0; padding: 0; font-family: Arial, sans-serif; }
+              @media print { 
+                @page { size: ${cfg.printWidth}mm ${cfg.printHeight}mm; margin: 0; }
+                body { width: ${cfg.printWidth}mm; }
+              }
               .print-box { 
                 width: ${cfg.printWidth}mm; 
-                min-height: ${cfg.printHeight}mm; 
+                height: ${cfg.printHeight}mm; 
                 padding: ${cfg.printPadding}mm;
                 display: flex;
                 flex-direction: column;
@@ -811,11 +819,13 @@ export default {
                 justify-content: center;
                 page-break-after: always;
               }
-              .print-content { display: flex; align-items: center; gap: 8px; }
+              .print-content { display: flex; align-items: center; gap: 5px; }
               .print-left { display: flex; flex-direction: column; }
-              .print-left-item { font-size: ${fontSize - 2}px; white-space: nowrap; }
-              .print-qrcode { margin: 5px 0; }
-              .print-code { font-size: ${fontSize}px; font-weight: bold; margin: 5px 0; font-family: monospace; }
+              .print-left-item { font-size: ${fontSize}px; white-space: nowrap; }
+              .print-qrcode canvas { width: ${qrcodeSize}px; height: ${qrcodeSize}px; }
+              .print-code { font-size: ${fontSize}px; font-weight: bold; margin: 3px 0; font-family: monospace; }
+              .print-fields { display: flex; flex-wrap: wrap; gap: 5px; margin: 3px 0; justify-content: center; }
+              .print-field { font-size: ${fontSize}px; }
             </style>
           </head>
           <body>${printHtml}</body>
@@ -936,11 +946,15 @@ export default {
             <head>
               <title>批次打印编码 - ${batch.batch_code}</title>
               <style>
-                body { margin: 0; padding: ${cfg.printPadding}mm; font-family: Arial, sans-serif; }
-                @media print { @page { size: ${cfg.printWidth}mm ${cfg.printHeight}mm; margin: 0; } }
+                * { margin: 0; padding: 0; box-sizing: border-box; }
+                body { margin: 0; padding: 0; font-family: Arial, sans-serif; }
+                @media print { 
+                  @page { size: ${cfg.printWidth}mm ${cfg.printHeight}mm; margin: 0; }
+                  body { width: ${cfg.printWidth}mm; }
+                }
                 .print-box { 
                   width: ${cfg.printWidth}mm; 
-                  min-height: ${cfg.printHeight}mm; 
+                  height: ${cfg.printHeight}mm; 
                   padding: ${cfg.printPadding}mm;
                   display: flex;
                   flex-direction: column;
@@ -948,13 +962,13 @@ export default {
                   page-break-after: always;
                 }
                 .print-text { font-size: ${fontSize}px; font-weight: ${cfg.fontWeight}; margin: 2px 0; }
-                .print-content { display: flex; align-items: center; gap: 5mm; }
+                .print-content { display: flex; align-items: center; gap: 5px; }
                 .print-left { display: flex; flex-direction: column; }
-                .print-left-item { font-size: ${fontSize - 2}px; white-space: nowrap; }
-                .print-qrcode { margin: 5px 0; }
-                .print-code { font-size: ${fontSize}px; font-weight: bold; margin: 5px 0; font-family: monospace; }
-                .print-fields { display: flex; flex-wrap: wrap; gap: 8px; margin: 5px 0; justify-content: center; }
-                .print-field { font-size: ${fontSize - 2}px; }
+                .print-left-item { font-size: ${fontSize}px; white-space: nowrap; }
+                .print-qrcode canvas { width: ${qrcodeSize}px; height: ${qrcodeSize}px; }
+                .print-code { font-size: ${fontSize}px; font-weight: bold; margin: 3px 0; font-family: monospace; }
+                .print-fields { display: flex; flex-wrap: wrap; gap: 5px; margin: 3px 0; justify-content: center; }
+                .print-field { font-size: ${fontSize}px; }
               </style>
             </head>
             <body>${printHtml}</body>

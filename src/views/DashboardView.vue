@@ -6,7 +6,6 @@
           <img src="../assets/images/logo.svg" alt="瓶胚管理系统" class="header-logo">
           <div class="header-brand-text">
             <h1 class="header-title">瓶胚全流程管理系统</h1>
-            <span class="header-version">版本 {{ version }} | 最后更新: {{ lastUpdate }}</span>
           </div>
         </div>
         <nav class="header-nav">
@@ -50,13 +49,9 @@
 </template>
 
 <script>
-import versionInfo from '../version.json'
-
 export default {
   data() {
     return {
-      version: versionInfo.version,
-      lastUpdate: versionInfo.lastUpdate
     }
   },
   methods: {
@@ -77,11 +72,5 @@ export default {
 .header-brand-text {
   display: flex;
   flex-direction: column;
-}
-
-.header-version {
-  font-size: 12px;
-  color: #999;
-  margin-top: 2px;
 }
 </style>

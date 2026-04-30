@@ -1,29 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
-  <defs>
-    <linearGradient id="glassGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.9"/>
-      <stop offset="100%" stop-color="#e0e0e0" stop-opacity="0.7"/>
-    </linearGradient>
-    <filter id="glassEffect" x="-50%" y="-50%" width="200%" height="200%">
-      <feGaussianBlur in="SourceAlpha" stdDeviation="2" result="blur"/>
-      <feOffset in="blur" dx="0" dy="2" result="offsetBlur"/>
-      <feComponentTransfer>
-        <feFuncA type="discrete" tableValues="0.2"/>
-      </feComponentTransfer>
-      <feMerge>
-        <feMergeNode/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
-    </filter>
-  </defs>
   <rect width="200" height="200" fill="none"/>
-  <g filter="url(#glassEffect)">
-    <path d="M100 30C120 30 135 45 135 65V140C135 160 120 175 100 175C80 175 65 160 65 140V65C65 45 80 30 100 30Z" fill="url(#glassGradient)" stroke="#999999" stroke-width="1"/>
-    <path d="M100 25C125 25 145 45 145 70V135C145 160 125 180 100 180C75 180 55 160 55 135V70C55 45 75 25 100 25Z" fill="none" stroke="#cccccc" stroke-width="1"/>
-    <circle cx="100" cy="25" r="3" fill="#999999"/>
-    <path d="M100 135C120 135 135 120 135 100C135 80 120 65 100 65C80 65 65 80 65 100C65 120 80 135 100 135Z" fill="none" stroke="#dddddd" stroke-width="1" opacity="0.5"/>
-  </g>
-  <path d="M100 140C120 140 135 125 135 105H65C65 125 80 140 100 140Z" fill="none" stroke="#999999" stroke-width="1"/>
-  <path d="M100 145C115 145 125 135 125 125H75C75 135 85 145 100 145Z" fill="none" stroke="#aaaaaa" stroke-width="1"/>
-  <path d="M100 150C110 150 115 145 115 140H85C85 145 90 150 100 150Z" fill="none" stroke="#bbbbbb" stroke-width="1"/>
+  <path d="M100 25 Q130 25 130 50 L130 120 Q130 145 100 145 L100 150 Q125 150 125 165 L125 180 Q125 185 100 185 Q75 185 75 180 L75 165 Q75 150 100 150 L100 145 Q70 145 70 120 L70 50 Q70 25 100 25 Z" fill="none" stroke="#333333" stroke-width="3" stroke-linecap="round"/>
+  <path d="M100 25 L100 140" fill="none" stroke="#999999" stroke-width="1.5"/>
+  <path d="M75 155 Q100 155 125 155" fill="none" stroke="#333333" stroke-width="3" stroke-linecap="round"/>
+  <path d="M75 165 Q100 165 125 165" fill="none" stroke="#333333" stroke-width="3" stroke-linecap="round"/>
+  <path d="M75 175 Q100 175 125 175" fill="none" stroke="#333333" stroke-width="3" stroke-linecap="round"/>
 </svg>
