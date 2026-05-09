@@ -890,8 +890,7 @@ export default {
       return value
     },
     getPreviewFieldDisplayValue(field) {
-      const displayValue = this.getPreviewFieldValue(field)
-      return `${field.label}：${displayValue}`
+      return this.getPreviewFieldValue(field)
     },
     async previewSingleBarcode(barcode) {
       this.previewBarcode = barcode

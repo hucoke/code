@@ -744,8 +744,10 @@ export default {
 .preview-container {
   display: flex;
   justify-content: center;
+  align-items: center;
   overflow-x: auto;
   padding: 10px 0;
+  min-height: 200px;
 }
 
 .preview-box {
@@ -755,7 +757,9 @@ export default {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   box-shadow: 0 1px 5px rgba(0,0,0,0.05);
+  flex-shrink: 0;
 }
 
 .preview-text {
