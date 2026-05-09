@@ -208,18 +208,24 @@
           <button class="close-btn" @click="closePreviewModal">&times;</button>
         </div>
         <div class="preview-content" :style="previewContentStyle">
+          <div v-if="barcodeConfig.customTextTop" class="preview-text">{{ barcodeConfig.customTextTop }}</div>
           <div class="preview-main">
-            <div class="preview-left">
-              <div class="preview-left-item">供应商：{{ previewBarcode.supplier || '' }}</div>
-              <div class="preview-left-item">生产线：{{ previewBarcode.productionLine || '' }}</div>
-              <div class="preview-left-item">产品型号：{{ previewBarcode.model || '' }}</div>
-              <div class="preview-left-item">生产日期：{{ previewBarcode.productionDate || '' }}</div>
+            <div class="preview-left" v-if="previewLeftFields.length > 0">
+              <div v-for="field in previewLeftFields" :key="field.key" class="preview-left-item">
+                {{ getPreviewFieldDisplayValue(field) }}
+              </div>
             </div>
             <div class="preview-qrcode">
               <canvas ref="previewCanvas"></canvas>
             </div>
           </div>
           <div class="preview-code">{{ previewBarcode.code }}</div>
+          <div class="preview-fields-bottom">
+            <span v-for="field in previewBottomFields" :key="field.key" class="preview-field-item">
+              {{ getPreviewFieldDisplayValue(field) }}
+            </span>
+          </div>
+          <div v-if="barcodeConfig.customTextBottom" class="preview-text preview-text-bottom">{{ barcodeConfig.customTextBottom }}</div>
         </div>
         <div class="modal-footer">
           <button class="btn btn-secondary" @click="closePreviewModal">关闭</button>
@@ -317,8 +323,10 @@ export default {
       }
     },
     previewModalStyle() {
+      const mmToPx = (mm) => mm * 3.7795
+      const contentWidth = mmToPx(parseInt(this.barcodeConfig.printWidth) || 100) + 60
       return {
-        width: `${this.previewConfig.printWidth + 40}px`,
+        width: `${contentWidth}px`,
         maxWidth: '90%'
       }
     },
@@ -777,6 +785,7 @@ export default {
 
       barcodesToPrint.forEach((barcode, index) => {
         const canvasId = `barcode_${index}`
+        const isLast = index === barcodesToPrint.length - 1
         
         const leftFieldsHtml = leftFields.map(field => 
           `<div class="print-left-item">${field.label}：${getFieldDisplayValue(field, barcode)}</div>`
@@ -787,7 +796,7 @@ export default {
         ).join('')
 
         printHtml += `
-          <div class="print-box">
+          <div class="print-box${isLast ? ' print-box-last' : ''}">
             <div class="print-content">
               ${leftFieldsHtml ? `<div class="print-left">${leftFieldsHtml}</div>` : ''}
               <div class="print-qrcode"><canvas id="${canvasId}"></canvas></div>
@@ -818,6 +827,9 @@ export default {
                 align-items: center;
                 justify-content: center;
                 page-break-after: always;
+              }
+              .print-box-last {
+                page-break-after: avoid;
               }
               .print-content { display: flex; align-items: center; gap: 5px; }
               .print-left { display: flex; flex-direction: column; }
@@ -918,17 +930,18 @@ export default {
 
         barcodes.forEach((barcode, index) => {
           const canvasId = `barcode_${index}`
+          const isLast = index === barcodes.length - 1
           
           const leftFieldsHtml = leftFields.map(field => 
-            `<div class="print-left-item">${getFieldDisplayValue(field, barcode)}</div>`
+            `<div class="print-left-item">${field.label}：${getFieldDisplayValue(field, barcode)}</div>`
           ).join('')
           
           const bottomFieldsHtml = bottomFields.map(field => 
-            `<div class="print-field">${getFieldDisplayValue(field, barcode)}</div>`
+            `<div class="print-field">${field.label}：${getFieldDisplayValue(field, barcode)}</div>`
           ).join('')
 
           printHtml += `
-            <div class="print-box">
+            <div class="print-box${isLast ? ' print-box-last' : ''}">
               ${cfg.customTextTop ? `<div class="print-text">${cfg.customTextTop}</div>` : ''}
               <div class="print-content">
                 ${leftFieldsHtml ? `<div class="print-left">${leftFieldsHtml}</div>` : ''}
@@ -960,6 +973,9 @@ export default {
                   flex-direction: column;
                   align-items: center;
                   page-break-after: always;
+                }
+                .print-box-last {
+                  page-break-after: avoid;
                 }
                 .print-text { font-size: ${fontSize}px; font-weight: ${cfg.fontWeight}; margin: 2px 0; }
                 .print-content { display: flex; align-items: center; gap: 5px; }
@@ -1066,6 +1082,10 @@ export default {
       if (field.format === 'abbreviation') return abbreviation
       if (field.format === 'both') return `${abbreviation}：${value}`
       return value
+    },
+    getPreviewFieldDisplayValue(field) {
+      const displayValue = this.getPreviewFieldValue(field)
+      return `${field.label}：${displayValue}`
     },
     async previewSingleBarcode(barcode) {
       this.previewBarcode = barcode
@@ -1175,6 +1195,9 @@ export default {
   display: flex;
   flex-direction: column;
   align-items: center;
+  background: white;
+  border: 1px dashed #ccc;
+  border-radius: 6px;
 }
 
 .preview-text {
@@ -1195,25 +1218,26 @@ export default {
   align-items: center;
   gap: 8px;
   margin: 5px 0;
+  width: 100%;
+  justify-content: center;
 }
 
-.preview-left-fields {
+.preview-left {
   display: flex;
   flex-direction: column;
 }
 
 .preview-left-item {
-  font-size: 10px;
   white-space: nowrap;
 }
 
 .preview-qrcode {
   margin: 5px 0;
+  flex-shrink: 0;
 }
 
 .preview-code {
   font-family: monospace;
-  font-size: 10px;
   font-weight: bold;
   margin: 5px 0;
 }
@@ -1227,7 +1251,6 @@ export default {
 }
 
 .preview-field-item {
-  font-size: 10px;
   color: #666;
 }
 

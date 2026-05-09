@@ -200,10 +200,14 @@ export default {
   },
   computed: {
     previewStyle() {
+      const mmToPx = (mm) => mm * 3.7795
+      const widthPx = mmToPx(parseInt(this.config.printWidth))
+      const heightPx = mmToPx(parseInt(this.config.printHeight))
+      const paddingPx = mmToPx(parseInt(this.config.printPadding))
       return {
-        width: `${parseInt(this.config.printWidth) + 10}px`,
-        minHeight: `${parseInt(this.config.printHeight) + 10}px`,
-        padding: `${this.config.printPadding}px`
+        width: `${widthPx}px`,
+        height: `${heightPx}px`,
+        padding: `${paddingPx}px`
       }
     },
     previewBoxStyle() {
@@ -383,14 +387,6 @@ export default {
       const qrcodeSize = parseInt(this.config.qrcodeSize)
       const fontSize = parseInt(this.config.fontSize)
 
-      const canvas = document.createElement('canvas')
-      await QRCode.toCanvas(canvas, this.encodingPreview, {
-        width: qrcodeSize,
-        margin: 1
-      })
-      
-      const qrCodeDataUrl = canvas.toDataURL('image/png')
-
       const leftFieldsHtml = this.leftFields.map(field => 
         `<div class="print-left-item">${this.getFieldDisplayValue(field)}</div>`
       ).join('')
@@ -405,23 +401,29 @@ export default {
           <head>
             <title>编码打印预览</title>
             <style>
-              body { margin: 0; padding: ${this.config.printPadding}mm; font-family: Arial, sans-serif; }
+              * { margin: 0; padding: 0; box-sizing: border-box; }
+              body { margin: 0; padding: 0; font-family: Arial, sans-serif; width: ${this.config.printWidth}mm; height: ${this.config.printHeight}mm; }
+              @media print { 
+                @page { size: ${this.config.printWidth}mm ${this.config.printHeight}mm; margin: 0; }
+                body { width: ${this.config.printWidth}mm; height: ${this.config.printHeight}mm; overflow: hidden; }
+              }
               .print-box { 
-                width: ${this.config.printWidth}mm; 
-                min-height: ${this.config.printHeight}mm; 
+                width: 100%; 
+                height: 100%; 
                 padding: ${this.config.printPadding}mm;
-                border: 1px dashed #ccc;
                 display: flex;
                 flex-direction: column;
+                align-items: center;
+                justify-content: center;
               }
-              .print-text { font-size: ${fontSize}px; font-weight: ${this.config.fontWeight}; margin: 2px 0; }
-              .print-content { display: flex; align-items: center; gap: 5mm; }
+              .print-text { font-size: ${fontSize}px; font-weight: ${this.config.fontWeight}; margin: 3px 0; }
+              .print-content { display: flex; align-items: center; gap: 5px; }
               .print-left { display: flex; flex-direction: column; }
-              .print-left-item { font-size: ${fontSize - 2}px; white-space: nowrap; }
-              .print-qrcode img { max-width: ${qrcodeSize}px; height: auto; }
-              .print-code { font-size: ${fontSize}px; font-weight: bold; margin: 5px 0; }
-              .print-fields { display: flex; flex-wrap: wrap; gap: 8px; margin: 5px 0; }
-              .print-field { font-size: ${fontSize - 2}px; }
+              .print-left-item { font-size: ${fontSize}px; white-space: nowrap; }
+              .print-qrcode canvas { width: ${qrcodeSize}px; height: ${qrcodeSize}px; }
+              .print-code { font-size: ${fontSize}px; font-weight: bold; margin: 3px 0; font-family: monospace; }
+              .print-fields { display: flex; flex-wrap: wrap; gap: 5px; margin: 3px 0; justify-content: center; }
+              .print-field { font-size: ${fontSize}px; }
             </style>
           </head>
           <body>
@@ -429,7 +431,7 @@ export default {
               ${this.config.customTextTop ? `<div class="print-text">${this.config.customTextTop}</div>` : ''}
               <div class="print-content">
                 ${leftFieldsHtml ? `<div class="print-left">${leftFieldsHtml}</div>` : ''}
-                <div class="print-qrcode"><img src="${qrCodeDataUrl}" alt="二维码"></div>
+                <div class="print-qrcode"><canvas id="printCanvas"></canvas></div>
               </div>
               <div class="print-code">${this.encodingPreview}</div>
               ${bottomFieldsHtml ? `<div class="print-fields">${bottomFieldsHtml}</div>` : ''}
@@ -439,8 +441,16 @@ export default {
         </html>
       `)
       printWindow.document.close()
-      printWindow.focus()
-      printWindow.print()
+      
+      setTimeout(async () => {
+        const canvas = printWindow.document.getElementById('printCanvas')
+        await QRCode.toCanvas(canvas, this.encodingPreview, {
+          width: qrcodeSize,
+          margin: 1
+        })
+        printWindow.focus()
+        printWindow.print()
+      }, 100)
     },
     showMessage(text, type) {
       this.saveMessage = { text, type }
@@ -500,8 +510,9 @@ export default {
 }
 
 .config-right {
-  width: 350px;
   flex-shrink: 0;
+  min-width: 350px;
+  max-width: 600px;
 }
 
 .config-section {
@@ -733,6 +744,8 @@ export default {
 .preview-container {
   display: flex;
   justify-content: center;
+  overflow-x: auto;
+  padding: 10px 0;
 }
 
 .preview-box {
