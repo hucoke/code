@@ -347,6 +347,159 @@ export default {
     this.loadData()
   },
   methods: {
+    async loadConfig() {
+      try {
+        const configResponse = await fetch('/api/barcodes/barcode-config')
+        const configData = await configResponse.json()
+        this.barcodeConfig = { ...this.barcodeConfig, ...configData }
+        if (configData.fields) {
+          this.availableFields = JSON.parse(configData.fields)
+        }
+      } catch (e) {
+        console.error('加载配置失败:', e)
+      }
+    },
+    
+    getFieldDisplayValue(field, barcode = null) {
+      const currentTime = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+      
+      const valueMap = barcode ? {
+        supplier: barcode.supplier || '',
+        productionLine: barcode.productionLine || barcode.production_line || '',
+        model: barcode.model || '',
+        rawMaterial: barcode.rawMaterial || barcode.raw_material || '',
+        productionDate: barcode.productionDate || barcode.production_date || '',
+        sequence: barcode.sequence ? barcode.sequence.toString().padStart(4, '0') : '',
+        batchCode: barcode.batchCode || barcode.batch_code || '',
+        currentTime: currentTime
+      } : {
+        supplier: this.product.supplier || '',
+        productionLine: this.product.productionLine || '',
+        model: this.product.model || '',
+        rawMaterial: this.product.rawMaterial || '',
+        productionDate: this.product.productionDate || '',
+        sequence: '',
+        batchCode: '',
+        currentTime: currentTime
+      }
+
+      const getAbbreviation = (key, value) => {
+        if (!value) return ''
+        switch(key) {
+          case 'supplier':
+            const supplierOpt = this.supplierOptions.find(o => o.value === value)
+            return supplierOpt?.abbreviation || value.substring(0, 2)
+          case 'productionLine':
+            const lineOpt = this.productionLineOptions.find(o => o.value === value)
+            return lineOpt?.abbreviation || value.replace('LINE-', '')
+          case 'model':
+            const modelOpt = this.modelOptions.find(o => o.value === value)
+            return modelOpt?.abbreviation || value.replace(/[^a-zA-Z0-9]/g, '').substring(0, 4)
+          case 'rawMaterial':
+            const rawOpt = this.rawMaterialOptions.find(o => o.value === value)
+            return rawOpt?.abbreviation || value.substring(0, 4)
+          case 'productionDate':
+            return value.replace(/-/g, '').substring(2)
+          case 'currentTime':
+            return currentTime.replace(':', '')
+          default:
+            return value
+        }
+      }
+      
+      const value = valueMap[field.key] || ''
+      const abbreviation = getAbbreviation(field.key, value)
+      
+      if (field.format === 'abbreviation') return abbreviation
+      if (field.format === 'both') return `${abbreviation}：${value}`
+      return value
+    },
+    
+    generatePrintContent(barcodes, options = {}) {
+      const { showCustomText = false, title = '打印编码' } = options
+      const cfg = this.barcodeConfig
+      const qrcodeSize = parseInt(cfg.qrcodeSize) || 120
+      const fontSize = parseInt(cfg.fontSize) || 10
+      
+      const leftFields = this.availableFields.filter(f => f.visible && f.position === 'left')
+      const bottomFields = this.availableFields.filter(f => f.visible && f.position === 'bottom')
+      
+      let printHtml = ''
+      
+      barcodes.forEach((barcode, index) => {
+        const canvasId = `barcode_${index}`
+        const isLast = index === barcodes.length - 1
+        
+        const leftFieldsHtml = leftFields.map(field => 
+          `<div class="print-left-item">${this.getFieldDisplayValue(field, barcode)}</div>`
+        ).join('')
+
+        const bottomFieldsHtml = bottomFields.map(field => 
+          `<div class="print-field">${this.getFieldDisplayValue(field, barcode)}</div>`
+        ).join('')
+
+        printHtml += `
+          <div class="print-box${isLast ? ' print-box-last' : ''}">
+            ${showCustomText && cfg.customTextTop ? `<div class="print-text">${cfg.customTextTop}</div>` : ''}
+            <div class="print-content">
+              ${leftFieldsHtml ? `<div class="print-left">${leftFieldsHtml}</div>` : ''}
+              <div class="print-qrcode"><canvas id="${canvasId}"></canvas></div>
+            </div>
+            <div class="print-code">${barcode.code}</div>
+            ${bottomFieldsHtml ? `<div class="print-fields">${bottomFieldsHtml}</div>` : ''}
+            ${showCustomText && cfg.customTextBottom ? `<div class="print-text">${cfg.customTextBottom}</div>` : ''}
+          </div>
+        `
+      })
+      
+      const isSingle = barcodes.length === 1
+      
+      return {
+        html: `
+          <html>
+            <head>
+              <title>${title}</title>
+              <style>
+                * { margin: 0; padding: 0; box-sizing: border-box; }
+                body { margin: 0; padding: 0; font-family: Arial, sans-serif; ${isSingle ? `width: ${cfg.printWidth}mm; height: ${cfg.printHeight}mm;` : ''} }
+                @media print { 
+                  @page { size: ${cfg.printWidth}mm ${cfg.printHeight}mm; margin: 0; }
+                  body { width: ${cfg.printWidth}mm; ${isSingle ? `height: ${cfg.printHeight}mm; overflow: hidden;` : ''} }
+                }
+                .print-box { 
+                  width: ${cfg.printWidth}mm; 
+                  height: ${cfg.printHeight}mm; 
+                  padding: ${cfg.printPadding}mm;
+                  display: flex;
+                  flex-direction: column;
+                  align-items: center;
+                  justify-content: center;
+                  ${isSingle ? '' : 'page-break-after: always;'}
+                }
+                ${!isSingle ? '.print-box-last { page-break-after: avoid; }' : ''}
+                .print-text { font-size: ${fontSize}px; font-weight: ${cfg.fontWeight}; margin: 2px 0; }
+                .print-content { display: flex; align-items: center; gap: 5px; }
+                .print-left { display: flex; flex-direction: column; }
+                .print-left-item { font-size: ${fontSize}px; white-space: nowrap; }
+                .print-qrcode canvas { width: ${qrcodeSize}px; height: ${qrcodeSize}px; }
+                .print-code { font-size: ${fontSize}px; font-weight: bold; margin: 3px 0; font-family: monospace; }
+                .print-fields { display: flex; flex-wrap: wrap; gap: 5px; margin: 3px 0; justify-content: center; }
+                .print-field { font-size: ${fontSize}px; }
+              </style>
+            </head>
+            <body>
+              ${printHtml}
+            </body>
+          </html>
+        `,
+        qrcodes: barcodes.map((barcode, index) => ({
+          canvasId: `barcode_${index}`,
+          code: barcode.code,
+          size: qrcodeSize
+        }))
+      }
+    },
+    
     async loadData() {
       this.loading = true
       try {
@@ -554,135 +707,25 @@ export default {
       return value
     },
     async printSingleBarcode(barcode) {
-      try {
-        const configResponse = await fetch('/api/barcodes/barcode-config')
-        const configData = await configResponse.json()
-        this.barcodeConfig = { ...this.barcodeConfig, ...configData }
-        if (configData.fields) {
-          try {
-            this.availableFields = JSON.parse(configData.fields)
-          } catch (e) {
-            console.error('解析字段配置失败:', e)
-          }
-        }
-      } catch (e) {
-        console.error('重新加载配置失败:', e)
-      }
+      await this.loadConfig()
       
-      const cfg = this.barcodeConfig
-      const qrcodeSize = parseInt(cfg.qrcodeSize) || 120
-      const fontSize = parseInt(cfg.fontSize) || 10
-
-      const now = new Date()
-      const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`
-
-      const getFieldDisplayValue = (field) => {
-        const valueMap = {
-          supplier: barcode.supplier || '',
-          productionLine: barcode.productionLine || barcode.production_line || '',
-          model: barcode.model || '',
-          rawMaterial: barcode.rawMaterial || barcode.raw_material || '',
-          productionDate: barcode.productionDate || barcode.production_date || '',
-          sequence: barcode.sequence ? barcode.sequence.toString().padStart(4, '0') : '',
-          batchCode: barcode.batchCode || barcode.batch_code || '',
-          currentTime: currentTime
-        }
-
-        const getAbbreviation = (key, value) => {
-          if (!value) return ''
-          switch(key) {
-            case 'supplier':
-              const supplierOpt = this.supplierOptions.find(o => o.value === value)
-              return supplierOpt?.abbreviation || value.substring(0, 2)
-            case 'productionLine':
-              const lineOpt = this.productionLineOptions.find(o => o.value === value)
-              return lineOpt?.abbreviation || value.replace('LINE-', '')
-            case 'model':
-              const modelOpt = this.modelOptions.find(o => o.value === value)
-              return modelOpt?.abbreviation || value.replace(/[^a-zA-Z0-9]/g, '').substring(0, 4)
-            case 'rawMaterial':
-              const rawOpt = this.rawMaterialOptions.find(o => o.value === value)
-              return rawOpt?.abbreviation || value.substring(0, 4)
-            case 'productionDate':
-              return value.replace(/-/g, '').substring(2)
-            case 'currentTime':
-              return currentTime.replace(':', '')
-            default:
-              return value
-          }
-        }
-
-        const value = valueMap[field.key] || ''
-        const abbreviation = getAbbreviation(field.key, value)
-
-        if (field.format === 'abbreviation') return abbreviation
-        if (field.format === 'both') return `${abbreviation}：${value}`
-        return value
-      }
-
-      const leftFields = this.availableFields.filter(f => f.visible && f.position === 'left')
-      const bottomFields = this.availableFields.filter(f => f.visible && f.position === 'bottom')
-
-      const leftFieldsHtml = leftFields.map(field => 
-        `<div class="print-left-item">${getFieldDisplayValue(field)}</div>`
-      ).join('')
-
-      const bottomFieldsHtml = bottomFields.map(field => 
-        `<div class="print-field">${getFieldDisplayValue(field)}</div>`
-      ).join('')
-
+      const { html, qrcodes } = this.generatePrintContent([barcode], { 
+        title: '打印编码',
+        showCustomText: false 
+      })
+      
       const printWindow = window.open('', '_blank')
-      
-      printWindow.document.write(`
-        <html>
-          <head>
-            <title>打印二维码</title>
-            <style>
-              * { margin: 0; padding: 0; box-sizing: border-box; }
-              body { margin: 0; padding: 0; font-family: Arial, sans-serif; width: ${cfg.printWidth}mm; height: ${cfg.printHeight}mm; }
-              @media print { 
-                @page { size: ${cfg.printWidth}mm ${cfg.printHeight}mm; margin: 0; }
-                body { width: ${cfg.printWidth}mm; height: ${cfg.printHeight}mm; overflow: hidden; }
-              }
-              .print-box { 
-                width: 100%; 
-                height: 100%; 
-                padding: ${cfg.printPadding}mm;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-              }
-              .print-content { display: flex; align-items: center; gap: 5px; }
-              .print-left { display: flex; flex-direction: column; }
-              .print-left-item { font-size: ${fontSize}px; white-space: nowrap; }
-              .print-qrcode canvas { width: ${qrcodeSize}px; height: ${qrcodeSize}px; }
-              .print-code { font-size: ${fontSize}px; font-weight: bold; margin: 3px 0; font-family: monospace; }
-              .print-fields { display: flex; flex-wrap: wrap; gap: 5px; margin: 3px 0; justify-content: center; }
-              .print-field { font-size: ${fontSize}px; }
-            </style>
-          </head>
-          <body>
-            <div class="print-box">
-              <div class="print-content">
-                ${leftFieldsHtml ? `<div class="print-left">${leftFieldsHtml}</div>` : ''}
-                <div class="print-qrcode"><canvas id="printBarcodeCanvas"></canvas></div>
-              </div>
-              <div class="print-code">${barcode.code}</div>
-              ${bottomFieldsHtml ? `<div class="print-fields">${bottomFieldsHtml}</div>` : ''}
-            </div>
-          </body>
-        </html>
-      `)
-      
+      printWindow.document.write(html)
       printWindow.document.close()
       
       setTimeout(async () => {
-        const printCanvas = printWindow.document.getElementById('printBarcodeCanvas')
-        await QRCode.toCanvas(printCanvas, barcode.code, {
-          width: qrcodeSize,
-          margin: 1
-        })
+        for (const { canvasId, code, size } of qrcodes) {
+          const canvas = printWindow.document.getElementById(canvasId)
+          await QRCode.toCanvas(canvas, code, {
+            width: size,
+            margin: 1
+          })
+        }
         
         printWindow.focus()
         printWindow.print()
@@ -711,152 +754,27 @@ export default {
         console.error('标记打印状态失败:', error)
       }
 
-      try {
-        const configResponse = await fetch('/api/barcodes/barcode-config')
-        const configData = await configResponse.json()
-        this.barcodeConfig = { ...this.barcodeConfig, ...configData }
-        if (configData.fields) {
-          try {
-            this.availableFields = JSON.parse(configData.fields)
-          } catch (e) {
-            console.error('解析字段配置失败:', e)
-          }
-        }
-      } catch (e) {
-        console.error('重新加载配置失败:', e)
-      }
-
-      const cfg = this.barcodeConfig
-      const qrcodeSize = parseInt(cfg.qrcodeSize) || 120
-      const fontSize = parseInt(cfg.fontSize) || 10
+      await this.loadConfig()
       
-      const now = new Date()
-      const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`
-
-      const getFieldDisplayValue = (field, barcodeData) => {
-        const valueMap = {
-          supplier: barcodeData.supplier || '',
-          productionLine: barcodeData.productionLine || barcodeData.production_line || '',
-          model: barcodeData.model || '',
-          rawMaterial: barcodeData.rawMaterial || barcodeData.raw_material || '',
-          productionDate: barcodeData.productionDate || barcodeData.production_date || '',
-          sequence: barcodeData.sequence ? barcodeData.sequence.toString().padStart(4, '0') : '',
-          batchCode: barcodeData.batchCode || barcodeData.batch_code || '',
-          currentTime: currentTime
-        }
-        
-        const getAbbreviation = (key, value) => {
-          if (!value) return ''
-          switch(key) {
-            case 'supplier':
-              const supplierOpt = this.supplierOptions.find(o => o.value === value)
-              return supplierOpt?.abbreviation || value.substring(0, 2)
-            case 'productionLine':
-              const lineOpt = this.productionLineOptions.find(o => o.value === value)
-              return lineOpt?.abbreviation || value.replace('LINE-', '')
-            case 'model':
-              const modelOpt = this.modelOptions.find(o => o.value === value)
-              return modelOpt?.abbreviation || value.replace(/[^a-zA-Z0-9]/g, '').substring(0, 4)
-            case 'rawMaterial':
-              const rawOpt = this.rawMaterialOptions.find(o => o.value === value)
-              return rawOpt?.abbreviation || value.substring(0, 4)
-            case 'productionDate':
-              return value.replace(/-/g, '').substring(2)
-            case 'currentTime':
-              return currentTime.replace(':', '')
-            default:
-              return value
-          }
-        }
-        
-        const value = valueMap[field.key] || ''
-        const abbreviation = getAbbreviation(field.key, value)
-        
-        if (field.format === 'abbreviation') return abbreviation
-        if (field.format === 'both') return `${abbreviation}：${value}`
-        return value
-      }
-
-      const leftFields = this.availableFields.filter(f => f.visible && f.position === 'left')
-      const bottomFields = this.availableFields.filter(f => f.visible && f.position === 'bottom')
-
-      const printWindow = window.open('', '_blank')
-      let printHtml = ''
-
-      barcodesToPrint.forEach((barcode, index) => {
-        const canvasId = `barcode_${index}`
-        const isLast = index === barcodesToPrint.length - 1
-        
-        const leftFieldsHtml = leftFields.map(field => 
-          `<div class="print-left-item">${getFieldDisplayValue(field, barcode)}</div>`
-        ).join('')
-
-        const bottomFieldsHtml = bottomFields.map(field => 
-          `<div class="print-field">${getFieldDisplayValue(field, barcode)}</div>`
-        ).join('')
-
-        printHtml += `
-          <div class="print-box${isLast ? ' print-box-last' : ''}">
-            <div class="print-content">
-              ${leftFieldsHtml ? `<div class="print-left">${leftFieldsHtml}</div>` : ''}
-              <div class="print-qrcode"><canvas id="${canvasId}"></canvas></div>
-            </div>
-            <div class="print-code">${barcode.code}</div>
-            ${bottomFieldsHtml ? `<div class="print-fields">${bottomFieldsHtml}</div>` : ''}
-          </div>
-        `
+      const { html, qrcodes } = this.generatePrintContent(barcodesToPrint, { 
+        title: '批量打印编码',
+        showCustomText: false 
       })
-
-      printWindow.document.write(`
-        <html>
-          <head>
-            <title>批量打印编码</title>
-            <style>
-              * { margin: 0; padding: 0; box-sizing: border-box; }
-              body { margin: 0; padding: 0; font-family: Arial, sans-serif; }
-              @media print { 
-                @page { size: ${cfg.printWidth}mm ${cfg.printHeight}mm; margin: 0; }
-                body { width: ${cfg.printWidth}mm; }
-              }
-              .print-box { 
-                width: ${cfg.printWidth}mm; 
-                height: ${cfg.printHeight}mm; 
-                padding: ${cfg.printPadding}mm;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-                page-break-after: always;
-              }
-              .print-box-last {
-                page-break-after: avoid;
-              }
-              .print-content { display: flex; align-items: center; gap: 5px; }
-              .print-left { display: flex; flex-direction: column; }
-              .print-left-item { font-size: ${fontSize}px; white-space: nowrap; }
-              .print-qrcode canvas { width: ${qrcodeSize}px; height: ${qrcodeSize}px; }
-              .print-code { font-size: ${fontSize}px; font-weight: bold; margin: 3px 0; font-family: monospace; }
-              .print-fields { display: flex; flex-wrap: wrap; gap: 5px; margin: 3px 0; justify-content: center; }
-              .print-field { font-size: ${fontSize}px; }
-            </style>
-          </head>
-          <body>${printHtml}</body>
-        </html>
-      `)
-
+      
+      const printWindow = window.open('', '_blank')
+      printWindow.document.write(html)
       printWindow.document.close()
 
       setTimeout(async () => {
-        barcodesToPrint.forEach(async (barcode, index) => {
-          const canvasId = `barcode_${index}`
-          const canvasElement = printWindow.document.getElementById(canvasId)
-          if (canvasElement) {
-            await QRCode.toCanvas(canvasElement, barcode.code, {
-              width: qrcodeSize,
+        for (const { canvasId, code, size } of qrcodes) {
+          const canvas = printWindow.document.getElementById(canvasId)
+          if (canvas) {
+            await QRCode.toCanvas(canvas, code, {
+              width: size,
               margin: 1
             })
           }
-        })
+        }
         printWindow.focus()
         printWindow.print()
       }, 100)
@@ -871,139 +789,27 @@ export default {
         const response = await fetch(`/api/barcodes/batches/${batch.batch_code}/barcodes`)
         const barcodes = await response.json()
 
-        const cfg = this.barcodeConfig
-        const qrcodeSize = parseInt(cfg.qrcodeSize) || 120
-        const fontSize = parseInt(cfg.fontSize) || 10
+        await this.loadConfig()
         
-        const now = new Date()
-        const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`
-
-        const getFieldDisplayValue = (field, barcodeData) => {
-          const valueMap = {
-            supplier: barcodeData.supplier || '',
-            productionLine: barcodeData.productionLine || barcodeData.production_line || '',
-            model: barcodeData.model || '',
-            rawMaterial: barcodeData.rawMaterial || barcodeData.raw_material || '',
-            productionDate: barcodeData.productionDate || barcodeData.production_date || '',
-            sequence: barcodeData.sequence ? barcodeData.sequence.toString().padStart(4, '0') : '',
-            batchCode: barcodeData.batchCode || barcodeData.batch_code || '',
-            currentTime: currentTime
-          }
-          
-          const getAbbreviation = (key, value) => {
-            if (!value) return ''
-            switch(key) {
-              case 'supplier':
-                const supplierOpt = this.supplierOptions.find(o => o.value === value)
-                return supplierOpt?.abbreviation || value.substring(0, 2)
-              case 'productionLine':
-                const lineOpt = this.productionLineOptions.find(o => o.value === value)
-                return lineOpt?.abbreviation || value.replace('LINE-', '')
-              case 'model':
-                const modelOpt = this.modelOptions.find(o => o.value === value)
-                return modelOpt?.abbreviation || value.replace(/[^a-zA-Z0-9]/g, '').substring(0, 4)
-              case 'rawMaterial':
-                const rawOpt = this.rawMaterialOptions.find(o => o.value === value)
-                return rawOpt?.abbreviation || value.substring(0, 4)
-              case 'productionDate':
-                return value.replace(/-/g, '').substring(2)
-              case 'currentTime':
-                return currentTime.replace(':', '')
-              default:
-                return value
-            }
-          }
-          
-          const value = valueMap[field.key] || ''
-          const abbreviation = getAbbreviation(field.key, value)
-          
-          if (field.format === 'abbreviation') return abbreviation
-          if (field.format === 'both') return `${abbreviation}：${value}`
-          return value
-        }
-
-        const leftFields = this.availableFields.filter(f => f.visible && f.position === 'left')
-        const bottomFields = this.availableFields.filter(f => f.visible && f.position === 'bottom')
-
-        const printWindow = window.open('', '_blank')
-        let printHtml = ''
-
-        barcodes.forEach((barcode, index) => {
-          const canvasId = `barcode_${index}`
-          const isLast = index === barcodes.length - 1
-          
-          const leftFieldsHtml = leftFields.map(field => 
-            `<div class="print-left-item">${getFieldDisplayValue(field, barcode)}</div>`
-          ).join('')
-          
-          const bottomFieldsHtml = bottomFields.map(field => 
-            `<div class="print-field">${getFieldDisplayValue(field, barcode)}</div>`
-          ).join('')
-
-          printHtml += `
-            <div class="print-box${isLast ? ' print-box-last' : ''}">
-              ${cfg.customTextTop ? `<div class="print-text">${cfg.customTextTop}</div>` : ''}
-              <div class="print-content">
-                ${leftFieldsHtml ? `<div class="print-left">${leftFieldsHtml}</div>` : ''}
-                <div class="print-qrcode"><canvas id="${canvasId}"></canvas></div>
-              </div>
-              <div class="print-code">${barcode.code}</div>
-              ${bottomFieldsHtml ? `<div class="print-fields">${bottomFieldsHtml}</div>` : ''}
-              ${cfg.customTextBottom ? `<div class="print-text">${cfg.customTextBottom}</div>` : ''}
-            </div>
-          `
+        const { html, qrcodes } = this.generatePrintContent(barcodes, { 
+          title: `批次打印编码 - ${batch.batch_code}`,
+          showCustomText: true 
         })
-
-        printWindow.document.write(`
-          <html>
-            <head>
-              <title>批次打印编码 - ${batch.batch_code}</title>
-              <style>
-                * { margin: 0; padding: 0; box-sizing: border-box; }
-                body { margin: 0; padding: 0; font-family: Arial, sans-serif; }
-                @media print { 
-                  @page { size: ${cfg.printWidth}mm ${cfg.printHeight}mm; margin: 0; }
-                  body { width: ${cfg.printWidth}mm; }
-                }
-                .print-box { 
-                  width: ${cfg.printWidth}mm; 
-                  height: ${cfg.printHeight}mm; 
-                  padding: ${cfg.printPadding}mm;
-                  display: flex;
-                  flex-direction: column;
-                  align-items: center;
-                  page-break-after: always;
-                }
-                .print-box-last {
-                  page-break-after: avoid;
-                }
-                .print-text { font-size: ${fontSize}px; font-weight: ${cfg.fontWeight}; margin: 2px 0; }
-                .print-content { display: flex; align-items: center; gap: 5px; }
-                .print-left { display: flex; flex-direction: column; }
-                .print-left-item { font-size: ${fontSize}px; white-space: nowrap; }
-                .print-qrcode canvas { width: ${qrcodeSize}px; height: ${qrcodeSize}px; }
-                .print-code { font-size: ${fontSize}px; font-weight: bold; margin: 3px 0; font-family: monospace; }
-                .print-fields { display: flex; flex-wrap: wrap; gap: 5px; margin: 3px 0; justify-content: center; }
-                .print-field { font-size: ${fontSize}px; }
-              </style>
-            </head>
-            <body>${printHtml}</body>
-          </html>
-        `)
-
+        
+        const printWindow = window.open('', '_blank')
+        printWindow.document.write(html)
         printWindow.document.close()
 
         setTimeout(async () => {
-          barcodes.forEach(async (barcode, index) => {
-            const canvasId = `barcode_${index}`
-            const canvasElement = printWindow.document.getElementById(canvasId)
-            if (canvasElement) {
-              await QRCode.toCanvas(canvasElement, barcode.code, {
-                width: qrcodeSize,
+          for (const { canvasId, code, size } of qrcodes) {
+            const canvas = printWindow.document.getElementById(canvasId)
+            if (canvas) {
+              await QRCode.toCanvas(canvas, code, {
+                width: size,
                 margin: 1
               })
             }
-          })
+          }
           printWindow.focus()
           printWindow.print()
         }, 100)
