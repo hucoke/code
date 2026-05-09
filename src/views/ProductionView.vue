@@ -624,11 +624,11 @@ export default {
       const bottomFields = this.availableFields.filter(f => f.visible && f.position === 'bottom')
 
       const leftFieldsHtml = leftFields.map(field => 
-        `<div class="print-left-item">${field.label}：${getFieldDisplayValue(field)}</div>`
+        `<div class="print-left-item">${getFieldDisplayValue(field)}</div>`
       ).join('')
 
       const bottomFieldsHtml = bottomFields.map(field => 
-        `<div class="print-field">${field.label}：${getFieldDisplayValue(field)}</div>`
+        `<div class="print-field">${getFieldDisplayValue(field)}</div>`
       ).join('')
 
       const printWindow = window.open('', '_blank')
@@ -788,11 +788,11 @@ export default {
         const isLast = index === barcodesToPrint.length - 1
         
         const leftFieldsHtml = leftFields.map(field => 
-          `<div class="print-left-item">${field.label}：${getFieldDisplayValue(field, barcode)}</div>`
+          `<div class="print-left-item">${getFieldDisplayValue(field, barcode)}</div>`
         ).join('')
 
         const bottomFieldsHtml = bottomFields.map(field => 
-          `<div class="print-field">${field.label}：${getFieldDisplayValue(field, barcode)}</div>`
+          `<div class="print-field">${getFieldDisplayValue(field, barcode)}</div>`
         ).join('')
 
         printHtml += `
@@ -933,11 +933,11 @@ export default {
           const isLast = index === barcodes.length - 1
           
           const leftFieldsHtml = leftFields.map(field => 
-            `<div class="print-left-item">${field.label}：${getFieldDisplayValue(field, barcode)}</div>`
+            `<div class="print-left-item">${getFieldDisplayValue(field, barcode)}</div>`
           ).join('')
           
           const bottomFieldsHtml = bottomFields.map(field => 
-            `<div class="print-field">${field.label}：${getFieldDisplayValue(field, barcode)}</div>`
+            `<div class="print-field">${getFieldDisplayValue(field, barcode)}</div>`
           ).join('')
 
           printHtml += `
